@@ -69,7 +69,6 @@ import { conn2, database_api, db_publico } from '../../../database/database-conn
         }
 
    
-
     async execute(   erp_category_sku:number, forceUpdate:boolean = false ){
         
         try {
@@ -84,24 +83,38 @@ import { conn2, database_api, db_publico } from '../../../database/database-conn
                   const dataIsShipped = await this.categoriaIntegrationRepository.checkShippmentstatus(erp_category_sku)
 
                 if(dataIsShipped.length){
-                    const {DATA_RECADASTRO } = categoryErp;
+                    const {DATA_RECADASTRO  } = categoryErp;
                     const { id_nuvemshop ,ultimo_envio  } = dataIsShipped[0];
+                        
+                        let resulPutFc ; 
 
                         if(forceUpdate){
                                 const responsePutCategory = await this.postCategoryRequest.put<ResponseNuvemshopCategory>( id_nuvemshop, dataCategoryMapped );
+                                resulPutFc =responsePutCategory 
                         }else{
                         // se a data de atualização da categoria do erp for maior que a de ultimo envio, faz atualização 
                             if(  new Date(DATA_RECADASTRO) >  new Date(ultimo_envio) ){
                                 const responsePutCategory = await this.postCategoryRequest.put<ResponseNuvemshopCategory>( id_nuvemshop, dataCategoryMapped );
-                              }
+                                resulPutFc =responsePutCategory 
+                            }
                         }
-                      
-                    //ja foi enviada
+                            await this.categoriaIntegrationRepository.partialUpdate({
+                                nome: resulPutFc!.name.pt,
+                                ultimo_envio: DATA_RECADASTRO
+                            }, 'codigo_erp', erp_category_sku);
 
                 }else{
 
                      const responseCreateCategory = await this.postCategoryRequest.post<ResponseNuvemshopCategory>(dataCategoryMapped);
-
+                     await this.categoriaIntegrationRepository.insert({
+                        codigo_erp: erp_category_sku,
+                        codigo_erp_pai: null,
+                        id_nuvemshop: String(responseCreateCategory.id),
+                        nivel: 'grupo',
+                        nome: responseCreateCategory.name.pt,
+                        parent_id_nuvemshop: null,
+                        ultimo_envio: categoryErp.DATA_RECADASTRO
+                     })
                     
                 }
 
