@@ -1,0 +1,377 @@
+import { Router } from "express";
+
+import 'dotenv/config';
+import { database_api } from "../database/database-connection.ts";
+import { seed } from "../database/seed.ts";
+import { AuthController } from "../modules/authorization/auth-controller.ts";
+import { ConfiguracoesIntegration } from "../modules/config-integration/configuracoes-integration-repository.ts";
+import { GetLocation } from "../modules/inventory/service/get-location-service.ts";
+import { LocaisIntegration } from "../modules/inventory/repository/locais-integration-repository.ts";
+import { PedidoIntegration } from "../modules/orders/repository/pedido-integration.ts";
+import { FotosProdutoIntegration } from "../modules/photos/repository/photos-products-repository.ts";
+import { PgImagensProdutos } from "../modules/photos/repository/postgres-images-repository.ts";
+import { PrecoController } from "../modules/pricing/controller/preco-controller.ts";
+import { ProdutoController } from "../modules/products/controller/produto-controller.ts";
+import { CategoriaController } from "../modules/categories/controller/categoria-controller.ts";
+import { GetPublications } from "../modules/sales-channels/get-sales-channels.ts";
+import { CanaisVendaIntegration } from "../modules/sales-channels/sales-channels-repository.ts";
+import { ErpPriceRepository } from "../modules/pricing/repository/erp-price-repository.ts";
+import { ErpInventoryRepository } from "../modules/inventory/repository/erp-inventory-repository.ts";
+import { LogsIntegration } from "../modules/logs/log-integration.ts";
+import { FpgtRepositoty } from "../modules/orders/repository/forma-pagemento-repository.ts";
+import { IntelipostListController } from "../modules/intelipost/intelipost-list-controller.ts";
+import { ProductErpRepository } from "../modules/products/repository/produto-repository.ts";
+import { PedidoController } from "../modules/orders/controller/pedido-controller.ts";
+import { EstoqueController } from "../modules/inventory/controller/estoque-controller.ts";
+import { AppmaxValidationController } from "../modules/app-max/web/appmax-validation.controller.ts";
+import { AppmaxCallbackController } from "../modules/app-max/web/appmax-callback.controller.ts";
+import { AppMaxIndexController } from "../modules/app-max/web/appmax-index.controller.ts";
+
+const router = Router();
+
+
+
+router.get('/', async (req, res) => {
+    if (database_api) {
+        const resultSeed = await seed()
+        console.log(resultSeed)
+    } else {
+        throw new Error("Nome do banco de dados nao foi definido.")
+    }
+    const objConfigurcoes = new ConfiguracoesIntegration();
+    const dados = await objConfigurcoes.select();
+
+    if (!dados.length) {
+        await objConfigurcoes.insert({
+            enviar_estoque: 'N',
+            enviar_preco: 'N',
+            enviar_produtos: 'N',
+            forma_pagamento: '0',
+            importar_pedidos: 'N',
+            vendedor_pedido: 0
+        })
+    }
+
+    res.render('index', { dados: dados[0] });
+
+
+})
+
+//router.post('/produto/single-update', new ProdutoController().syncSingleProduct)
+
+router.get('/produtos', new ProdutoController().allProducts);
+
+
+router.get('/produto/:codigo', async (req, res) => {
+    try {
+        const codigo = req.params.codigo;
+        const produtoRepository = new ProductErpRepository();
+        const fotosProdutosIntegration = new FotosProdutoIntegration(); // MySQL
+        const pgImagensProdutos = new PgImagensProdutos(); // Postgres
+        const configuracoesIntegration = new ConfiguracoesIntegration();
+
+        const configIntegration = await configuracoesIntegration.select();
+
+        const {  tabela_preco } =configIntegration[0];
+        // 1. Busca os detalhes do produto no ERP
+        const produtos = await produtoRepository.findSingleCompleteErpProduct(Number(codigo), tabela_preco);
+        if (!produtos || produtos.length === 0) return res.status(404).send("Produto não encontrado.");
+
+        const produto = produtos[0] as any;
+
+        // 2. Busca fotos que já foram processadas (estão no MySQL)
+        const fotosNoMysql = await fotosProdutosIntegration.selectByParam({ erp_sku: codigo });
+
+        // 3. Busca fotos que estão no Postgres (Imagens originais)
+        const fotosNoPostgres = await pgImagensProdutos.find(codigo.toString());
+
+        // 4. Criamos uma lista unificada para a tela
+        // Vamos marcar o que vem do Postgres para o JS saber tratar
+        const imagensUnificadas: any[] = [];
+
+        // Adiciona as do MySQL primeiro (que já tem link externo)
+        fotosNoMysql.forEach(img => {
+            imagensUnificadas.push({
+                link: img.link,
+                id_postgres: img.id_postgres, // importante ter essa coluna no seu MySQL
+                ativo: 'S',
+                origem: 'mysql'
+            });
+        });
+
+        // Adiciona as do Postgres que AINDA NÃO estão no MySQL
+        if (fotosNoPostgres) {
+            fotosNoPostgres.forEach(pgImg => {
+                const jaExiste = fotosNoMysql.some(m => m.id_postgres == pgImg.id);
+                if (!jaExiste) {
+                    imagensUnificadas.push({
+                        link: `data:image/jpeg;base64,${pgImg.imagem}`, // Base64 para exibir o preview
+                        id_postgres: pgImg.id,
+                        ativo: 'S',
+                        origem: 'postgres'
+                    });
+                }
+            });
+        }
+
+
+        produto.IMAGENS = imagensUnificadas;
+
+        res.render('produto-editar', {
+            produto: produto,
+            pageTitle: `Editar Produto ${codigo}`,
+        });
+
+    } catch (error) {
+        console.error("Erro ao carregar produto:", error);
+        res.status(500).send("Erro interno.");
+    }
+})
+
+router.post('/post-products', new ProdutoController().syncProduct)
+
+//router.post('/produtos/acao-global', new ProdutoController().bulkGlobalAction);
+
+
+router.post('/post-preco', new PrecoController().post)
+
+router.post('/post-estoque', new EstoqueController().postSaldo)
+
+const categoriaController = new CategoriaController();
+router.get('/categorias', (req, res) => categoriaController.index(req, res));
+router.post('/api/categorias', (req, res) => categoriaController.send(req, res));
+
+
+
+router.get('/setores', async (req, res) => {
+    const locaisIntegration = new LocaisIntegration();
+    const arrLocais = await locaisIntegration.selectAll();
+    res.render('setores', {
+        locais: arrLocais
+    });
+});
+
+
+router.get('/canais-venda', async (req, res) => {
+    const canaisVendaIntegration = new CanaisVendaIntegration();
+    const arrCanais = await canaisVendaIntegration.findAll();
+    res.render('canais-venda', {
+        canais: arrCanais
+    });
+});
+router.post('/canais/sync', async (req, res) => {
+    const service = new GetPublications();
+    const result = await service.get();
+    res.json(result);
+});
+
+
+router.post('/locais/sync', async (req, res) => {
+    const service = new GetLocation();
+    const result = await service.getAllLocation();
+    res.json(result);
+});
+
+
+
+
+router.get('/pedidos', async (req, res) => {
+    try {
+        const pedidoIntegration = new PedidoIntegration();
+
+        // Paginação e Filtros via Query Params
+        const numberPage = Number(req.query.page)
+        const page = numberPage || 1;
+        const limit = 20;
+        const search = req.query.search || '' as any;
+        const sync_status = String(req.query.sync_status) || '';
+
+        // Busca dados
+        const { data, total } = await pedidoIntegration.findAll({ search, sync_status }, page, limit);
+
+        const totalPages = Math.ceil(total / limit);
+
+        res.render('pedidos', {
+            pedidos: data,
+            filters: { search, sync_status },
+            pagination: {
+                currentPage: page,
+                totalPages: totalPages,
+                totalItems: total
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+        res.render('pedidos', {
+            pedidos: [],
+            filters: {},
+            pagination: { currentPage: 1, totalPages: 1, totalItems: 0 },
+            error: "Erro ao carregar dados."
+        });
+    }
+});
+router.post('/api/pedidos/sync-manual', async (req, res) => {
+    const obj = new PedidoController()
+    await obj.getpedidos(req, res)
+})
+
+
+router.get('/configuracoes', async (req, res) => {
+    try {
+        const objeConfigurcoes = new ConfiguracoesIntegration();
+        const fpgtRepositoty = new FpgtRepositoty();
+        const erpPriceRepository = new ErpPriceRepository();
+        const erpInventoryRepository = new ErpInventoryRepository();
+
+        const data = await objeConfigurcoes.select();
+        const setores = await erpInventoryRepository.findSectorErp();
+        const tabelas = await erpPriceRepository.findPriceTables();
+
+
+        const formas_pagamento = await fpgtRepositoty.findAll();
+
+        // Verifica se existe o parametro ?sucesso=true na URL
+        const showSuccessMessage = req.query.sucesso === 'true';
+        const showErrorMessage = req.query.erro === 'true';
+
+        res.render('configuracoes', {
+            // Passamos as flags para o EJS
+            msgSucesso: showSuccessMessage,
+            msgErro: showErrorMessage,
+
+            dados: {
+                vendedor: data[0]?.vendedor_pedido || '',
+                enviar_estoque: data[0]?.enviar_estoque,
+                enviar_preco: data[0]?.enviar_preco,
+                enviar_produtos: data[0]?.enviar_produtos,
+                importar_pedidos: data[0]?.importar_pedidos,
+                forma_pagamento: data[0]?.forma_pagamento
+            },
+            formas_pagamento: formas_pagamento || [],
+            setores: setores,
+            tabelas: tabelas,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Erro ao carregar configurações");
+    }
+});
+
+router.post('/ajusteConfig', async (req, res) => {
+    try {
+        const configuracoesIntegration = new ConfiguracoesIntegration();
+
+        if (req.body) {
+            await configuracoesIntegration.update({
+                enviar_estoque: req.body.enviar_estoque,
+                enviar_preco: req.body.enviar_preco,
+                enviar_produtos: req.body.enviar_produtos,
+                tabela_preco: req.body.tabela_preco,
+                importar_pedidos: req.body.importar_pedidos,
+                vendedor_pedido: req.body.codigo_vendedor,
+                forma_pagamento: req.body.forma_pagamento
+            });
+
+            // SUCESSO: Redireciona para a mesma página com a flag de sucesso
+            // Isso força o navegador a recarregar a página com os dados novos
+            return res.redirect('/configuracoes?sucesso=true');
+        } else {
+            return res.redirect('/configuracoes?erro=true');
+        }
+
+    } catch (error) {
+        console.error("Erro ao salvar config:", error);
+        // ERRO: Redireciona com flag de erro
+        return res.redirect('/configuracoes?erro=true');
+    }
+});
+
+router.get('/logs', async (req, res) => {
+    try {
+        const logIntegration = new LogsIntegration();
+
+        // Pega parâmetros da URL (ex: /logs?page=2&status=error)
+        const numberPage = Number(req.query.page);
+        const page = numberPage || 1;
+        const status = String(req.query.status) || 'sucess';
+        const search = req.query.search || '' as any;
+        const limit = 20;
+
+        // Busca no banco
+        const { data, total } = await logIntegration.findAll({ status, search }, page, limit);
+
+        // Calcula total de páginas
+        const totalPages = Math.ceil(total / limit);
+
+        res.render('logs', {
+            logs: data,
+            filters: { page, status, search },
+            pagination: {
+                currentPage: page,
+                totalPages: totalPages,
+                totalItems: total
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro ao carregar logs:", error);
+        res.status(500).send("Erro interno ao carregar logs.");
+    }
+});
+
+
+router.get('/fotos', async (req, res) => {
+    const sku = req.query.sku as string;
+
+    const fotosPostgres: { base64: string; id: string }[] = [];
+    const fotosOldSite: { url: string; id: number }[] = [];
+
+    if (sku) {
+        const pgRepo = new PgImagensProdutos();
+        const pgResult = await pgRepo.find(sku);
+        if (pgResult) {
+            for (const img of pgResult) {
+                fotosPostgres.push({ base64: img.imagem, id: img.id });
+            }
+        }
+
+       
+    }
+
+    res.render('fotos/index', {
+        sku: sku || '',
+        fotosPostgres,
+    });
+});
+
+router.get('/auth', new AuthController().auth);
+
+router.get('/auth/callback', new AuthController().callback);
+
+const intelipostController = new IntelipostListController();
+router.get('/intelipost/envios', (req, res) => intelipostController.listarPedidos(req, res));
+router.post('/api/intelipost/enviar-lote', (req, res) => intelipostController.enviarLote(req, res));
+
+// Health check público exigido pela Appmax no /app/client/generate:
+// deve responder 200 + {"external_id":"<UUID>"}. GET e POST porque a Appmax
+// pode chamar de qualquer método conforme o cadastro da URL de validação.
+const appmaxValidationController = new AppmaxValidationController();
+router.get('/appmax/validate', (req, res) => appmaxValidationController.validate(req, res));
+router.post('/appmax/validate', (req, res) => appmaxValidationController.validate(req, res));
+
+
+const appmaxCallbackController = new AppmaxCallbackController();
+// Rota raiz ou a rota exata definida no APPMAX_REDIRECT_URL
+router.get('/appmax/callback', (req, res) => appmaxCallbackController.handleCallback(req, res));
+// Caso a Appmax envie via POST em algum cenário:
+router.post('/appmax/callback', (req, res) => appmaxCallbackController.handleCallback(req, res));
+
+
+const appMaxIndexController = new AppMaxIndexController();
+router.get('/appmax', (req, res)=> appMaxIndexController.index(req, res));
+
+
+export { router };
+
+

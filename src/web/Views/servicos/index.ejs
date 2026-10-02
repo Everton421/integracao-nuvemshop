@@ -1,0 +1,120 @@
+ 
+
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>servicos Sincronizados</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Feather Icons (se for usar no contexto do dashboard) -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+
+    <style>
+        /* Estilos adicionais, se necessário */
+        .table th {
+            white-space: nowrap; /* Evita quebra de linha nos cabeçalhos */
+        }
+        .price-column {
+            text-align: right; /* Alinha preços à direita */
+        }
+        .stock-column {
+            text-align: center; /* Alinha estoque ao centro ou direita */
+        }
+    </style>
+</head>
+
+<body>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/">INTERSIG  </a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="#">Sair (opcional)</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <%#
+              Se tiver uma sidebar:
+              <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                  <!-- Conteúdo da Sidebar -->
+              </nav>
+            %>
+   <%- include('../components/sidebar', { activePage: 'home' }) %>
+
+            <!-- Ajuste a classe col-md-9 ou col-md-12 dependendo se você tem uma sidebar -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Lista de servicos Sincronizados</h1>
+                    <!-- Botões de ação (opcional) -->
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                            <span data-feather="refresh-cw"></span>
+                            Atualizar Lista
+                        </button>
+                    </div>
+                </div>
+
+                     <% if (servicos && servicos.servicos && servicos.servicos.length > 0) { %>
+                    <p>Total de servicos encontrados: <span class="badge bg-info"><%= servicos.length %></span></p>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-bordered table-sm">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Código</th>
+                                    <th scope="col">Aplicação</th>
+                                    <th scope="col" class="price-column">Valor (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% servicos.servicos.forEach((item, index) => { %>
+                                    <tr>
+                                        <th scope="row"><%= index + 1 %></th>
+                                        <td><%= item.CODIGO %></td>
+                                        <td><%= item.APLICACAO || item.aplicacao || 'N/A' %></td> <%# Ajuste para o nome do seu campo %>
+                                        <td class="price-column">
+                                            <%# Formatação de moeda (BRL) %>
+                                            <% if (typeof item.VALOR === 'number') { %>
+                                                <%= item.VALOR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) %>
+                                            <% } else { %>
+                                                N/A
+                                            <% } %>
+                                        </td>
+                                      
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <div class="alert alert-warning" role="alert">
+                        Nenhum serviço sincronizado encontrado.
+                    </div>
+                <% } %>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS (inclui Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+    <script>
+        feather.replace(); // Para ativar os ícones Feather
+    </script>
+</body>
+
+</html>

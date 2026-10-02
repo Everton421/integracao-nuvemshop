@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs de Integração</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <style>
+        /* Mesmos estilos da tela de produtos */
+        .table th { white-space: nowrap; }
+        .no-results { text-align: center; font-style: italic; color: #6c757d; }
+        
+        /* Estilos específicos para logs */
+        .json-pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            border: 1px solid #dee2e6;
+        }
+        .status-badge { min-width: 80px; }
+        .text-truncate-cell {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar Superior -->
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/">INTERSIG</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="#">Sair (opcional)</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- Sidebar Include (Mesmo do produtos) -->
+            <%- include('../components/sidebar', { activePage: 'logs' }) %>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                
+                <!-- Cabeçalho da Página -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <p class="h4">Logs do Sistema</p>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                            <span data-feather="refresh-cw"></span>
+                            Atualizar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ÁREA DE FILTROS (Estilo Card para separar) -->
+                <div class="card mb-4 border-light shadow-sm bg-light">
+                    <div class="card-body py-3">
+                        <form action="/logs" method="GET" class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                <input type="text" name="search" class="form-control form-control-sm" 
+                                       placeholder="Pesquisar por ID, Mensagem..." 
+                                       value="<%= typeof filters !== 'undefined' ? filters.search : '' %>">
+                            </div>
+                            <div class="col-md-3">
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="">Todos os Status</option>
+                                    <option value="sucess" <%= (typeof filters !== 'undefined' && filters.status === 'sucess') ? 'selected' : '' %>>Sucesso</option>
+                                    <option value="error" <%= (typeof filters !== 'undefined' && filters.status === 'error') ? 'selected' : '' %>>Erro</option>
+                                    <option value="warning" <%= (typeof filters !== 'undefined' && filters.status === 'warning') ? 'selected' : '' %>>Aviso</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-sm btn-primary w-100">
+                                    <span data-feather="filter"></span> Filtrar
+                                </button>
+                            </div>
+                            <div class="col-md-1">
+                                <a href="/logs" class="btn btn-sm btn-outline-secondary w-100" title="Limpar Filtros">
+                                    <span data-feather="x"></span>
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TABELA DE LOGS -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered table-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th scope="col" style="width: 60px;">ID</th>
+                                <th scope="col">Data/Hora</th>
+                                <th scope="col">Origem</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Mensagem</th>
+                                <th scope="col" class="text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (logs && logs.length > 0) { %>
+                                <% logs.forEach(log => { %>
+                                    <tr>
+                                        <td><%= log.id %></td>
+                                        <td><%= new Date(log.created_at).toLocaleString('pt-BR') %></td>
+                                        <td>
+                                            <span class="badge bg-secondary text-uppercase" style="font-size: 0.7rem;">
+                                                <%= log.referencia %>
+                                            </span>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">ID: <%= log.referencia_id %></small>
+                                        </td>
+                                        <td>
+                                            <% if (log.status === 'sucess') { %>
+                                                <span class="badge bg-success status-badge">Sucesso</span>
+                                            <% } else if (log.status === 'error') { %>
+                                                <span class="badge bg-danger status-badge">Erro</span>
+                                            <% } else { %>
+                                                <span class="badge bg-warning text-dark status-badge">Aviso</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-truncate-cell" title="<%= log.message %>">
+                                            
+                                <textarea class="form-control"  disabled ><%= log.message %></textarea>
+
+                                        </td>
+                                        <td class="text-center">
+                                            <!-- Botão que abre o Modal -->
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-info btn-view-json"
+                                                    data-id="<%= log.id %>"
+                                                    data-json="<%= log.dados_shopify %>"
+                                                    title="Ver Detalhes JSON">
+                                                <span data-feather="code"></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="no-results py-4">
+                                        Nenhum registro de log encontrado.
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PAGINAÇÃO (Mesma lógica do produtos) -->
+                <% if (typeof pagination !== 'undefined' && pagination.totalPages > 1) { %>
+                    <nav aria-label="Navegação de página" class="mt-4 pb-4">
+                        <ul class="pagination justify-content-center">
+                            
+                            <!-- Botão Anterior -->
+                            <li class="page-item <%= pagination.currentPage <= 1 ? 'disabled' : '' %>">
+                                <a class="page-link" href="/logs?page=<%= pagination.currentPage - 1 %>&status=<%= filters.status %>&search=<%= filters.search %>">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+
+                            <li class="page-item disabled">
+                                <span class="page-link">Página <%= pagination.currentPage %> de <%= pagination.totalPages %></span>
+                            </li>
+
+                            <!-- Botão Próximo -->
+                            <li class="page-item <%= pagination.currentPage >= pagination.totalPages ? 'disabled' : '' %>">
+                                <a class="page-link" href="/logs?page=<%= pagination.currentPage + 1 %>&status=<%= filters.status %>&search=<%= filters.search %>">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="text-center text-muted small mt-2">
+                            Total de registros: <%= pagination.totalItems %>
+                        </div>
+                    </nav>
+                <% } %>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL PARA EXIBIR JSON -->
+    <div class="modal fade" id="jsonModal" tabindex="-1" aria-labelledby="jsonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="jsonModalLabel">Detalhes do Log #<span id="modalLogId"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2"><strong>Payload / Resposta:</strong></p>
+                    <pre id="modalJsonContent" class="json-pre"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Inicializa ícones
+        feather.replace();
+
+        $(document).ready(function() {
+            
+            // Lógica do Modal de JSON
+            $('.btn-view-json').on('click', function() {
+                const id = $(this).data('id');
+                let rawJson = $(this).attr('data-json'); // Usar .attr para pegar o valor bruto
+                const $modalContent = $('#modalJsonContent');
+                
+                $('#modalLogId').text(id);
+
+                try {
+                    if (rawJson && rawJson !== 'undefined' && rawJson !== 'null') {
+                        // Tenta converter se for string, ou usa direto se já for objeto
+                        // As vezes o EJS renderiza aspas que quebram o HTML attribute, 
+                        // idealmente no backend você deve garantir que aspas duplas sejam escapadas
+                        // ou renderizar o dado em uma variavel JS oculta.
+                        
+                        let jsonObj = rawJson;
+                        if (typeof rawJson === 'string') {
+                            // Se começar com aspas extras por causa do HTML attribute
+                            if(rawJson.startsWith('"') && rawJson.endsWith('"')) {
+                                rawJson = rawJson.substring(1, rawJson.length - 1);
+                            }
+                            jsonObj = JSON.parse(rawJson);
+                        }
+                        
+                        $modalContent.text(JSON.stringify(jsonObj, null, 4));
+                    } else {
+                        $modalContent.text("Nenhum dado JSON disponível.");
+                    }
+                } catch (e) {
+                    console.error("Erro ao parsear JSON:", e);
+                    $modalContent.text(rawJson || "Erro de formato.");
+                }
+
+                const myModal = new bootstrap.Modal(document.getElementById('jsonModal'));
+                myModal.show();
+            });
+        });
+    </script>
+</body>
+</html>

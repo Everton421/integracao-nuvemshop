@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Vincular Locais Shopify</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+    
+    <style>
+        body {
+            font-size: .875rem;
+        }
+
+        /* Ajuste para a Navbar Fixa */
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+
+        .navbar .form-control {
+            padding: .75rem 1rem;
+        }
+
+        /* Ajuste do conteúdo para não sumir atrás da navbar e sidebar */
+        [main] {
+            padding-top: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                top: 0;
+                height: 100vh;
+                padding-top: 3.5rem; /* Altura da navbar */
+            }
+            main {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR TOPO -->
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/">INTERSIG</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-nav w-100">
+            <!-- Espaço opcional para busca ou links direitos -->
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- SIDEBAR (Incluindo seu componente) -->
+            <%- include('../components/sidebar', { activePage: 'setores' }) %>
+
+            <!-- CONTEÚDO PRINCIPAL -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                
+                <!-- Título e Botões -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h3"><span data-feather="map-pin"></span> Locais vs Setores</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button id="btnSyncShopify" class="btn btn-sm btn-outline-secondary me-2">
+                            <span data-feather="refresh-cw"></span> Buscar na Shopify
+                        </button>
+                        <button id="btnSaveLinks" class="btn btn-sm btn-success">
+                            <span data-feather="save"></span> Salvar Vínculos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela -->
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-striped mb-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="40%">Local Shopify (Origem)</th>
+                                    <th width="20%">ID Shopify</th>
+                                    <th width="40%">Setor do Sistema (Destino)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if(locais && locais.length > 0) { %>
+                                    <% locais.forEach(local => { %>
+                                        <tr data-local-id="<%= local.id %>">
+                                            <td>
+                                                <strong><%= local.nome %></strong>
+                                                <% if(local.address) { %>
+                                                    <br><small class="text-muted"><%= local.address %></small>
+                                                <% } %>
+                                            </td>
+                                            <td><small class="text-muted"><%= local.id_shopify ? local.id_shopify.split('/').pop() : 'N/A' %></small></td>
+                                            <td>
+                                                <select class="form-select form-select-sm select-setor">
+                                                    <option value="">Selecionar...</option>
+                                                    <option value="<%= local.id %>" selected> <%= local.nome %> </option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4">Nenhum local encontrado.</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        feather.replace();
+
+        // Botão Salvar
+        $('#btnSaveLinks').click(function() {
+            const vinculos = [];
+            $('tr[data-local-id]').each(function() {
+                const idLocal = $(this).data('local-id');
+                const idSetor = $(this).find('.select-setor').val();
+                vinculos.push({ idLocal, idSetor });
+            });
+
+            const $btn = $(this);
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            $.ajax({
+                url: '/setores/vincular',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ vinculos }),
+                success: function(res) { alert(res.message); },
+                error: function() { alert('Erro ao salvar'); },
+                complete: function() { 
+                    $btn.prop('disabled', false).html('<span data-feather="save"></span> Salvar Vínculos'); 
+                    feather.replace();
+                }
+            });
+        });
+
+        // Botão Sincronizar
+        $('#btnSyncShopify').click(function() {
+            if(!confirm("Sincronizar locais?")) return;
+            const $btn = $(this);
+            $btn.prop('disabled', true).text("Aguarde...");
+            $.post('/locais/sync', function(res) {
+                alert(res.message);
+                window.location.reload();
+            });
+        });
+    </script>
+
+    <!-- Bootstrap JS (Necessário para o botão de colapso no mobile) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

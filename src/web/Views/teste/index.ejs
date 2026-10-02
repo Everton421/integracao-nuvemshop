@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produtos Sincronizados</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+    <!-- jQuery (NECESSÁRIO PARA O SCRIPT ABAIXO) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <style>
+        .table th {
+            white-space: nowrap;
+        }
+        .price-column {
+            text-align: right;
+        }
+        .stock-column {
+            text-align: center;
+        }
+        .action-buttons {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        /* Estilo para a linha de "nenhum resultado" */
+        .no-results {
+            text-align: center;
+            font-style: italic;
+            color: #6c757d; /* Cor secundária do Bootstrap */
+        }
+    </style>
+</head>
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="text-light mt-2">Processando, por favor aguarde...</p>
+</div>
+<body>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/">INTERSIG</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="#">Sair (opcional)</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <%#
+              Se tiver uma sidebar:
+              <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                  <!-- Conteúdo da Sidebar -->
+              </nav>
+            %>
+   <%- include('../components/sidebar', { activePage: 'home' }) %>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 ">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <p class="h4">Lista de Produtos</p>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        
+                    <p>Total de produtos encontrados: <span class="badge bg-info"><%= produtos.length %></span></p>
+                    <button type="button" class="btn btn-sm btn-outline-secondary " onclick="window.location.reload()">
+                            <span data-feather="refresh-cw"></span>
+                            Atualizar Lista
+                        </button>
+                    </div>
+                </div>
+
+                <% if (produtos && produtos.length > 0) { %>
+                    <form id="sendSelectedProductsForm" action="/post-products" method="POST">
+
+                    <!-- NOVO CAMPO DE PESQUISA -->
+                    <div class="mb-3">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar por Código ou Nome/Descrição...">
+                    </div>
+
+
+                       <div class="action-buttons  ">
+                            <button type="submit" class="btn btn-primary" >
+                                <span data-feather="send"></span>
+                                Enviar Selecionados
+                            </button>
+                        </div>
+                    <!-- INÍCIO DO FORMULÁRIO -->
+                   
+
+<% if (pagination.totalPages > 1) { %>
+<nav aria-label="Navegação de página" class="mt-4">
+    <ul class="pagination justify-content-center">
+        
+        <!-- Botão Anterior -->
+        <li class="page-item <%= pagination.page <= 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="/produtos?page=<%= pagination.page - 1 %>" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+
+        <!-- Lógica para mostrar números das páginas -->
+        <!-- Mostraremos: Primeira, atual-2, atual-1, ATUAL, atual+1, atual+2, Última -->
+        <% 
+           let startPage = Math.max(1, pagination.page - 2);
+           let endPage = Math.min(pagination.totalPages, pagination.page + 2);
+        %>
+
+        <% if (startPage > 1) { %>
+            <li class="page-item"><a class="page-link" href="/produtos?page=1">1</a></li>
+            <% if (startPage > 2) { %> <li class="page-item disabled"><span class="page-link">...</span></li> <% } %>
+        <% } %>
+
+        <% for(let i = startPage; i <= endPage; i++) { %>
+            <li class="page-item <%= pagination.page === i ? 'active' : '' %>">
+                <a class="page-link" href="/produtos?page=<%= i %>"><%= i %></a>
+            </li>
+        <% } %>
+
+        <% if (endPage < pagination.totalPages) { %>
+            <% if (endPage < pagination.totalPages - 1) { %> <li class="page-item disabled"><span class="page-link">...</span></li> <% } %>
+            <li class="page-item"><a class="page-link" href="/produtos?page=<%= pagination.totalPages %>"><%= pagination.totalPages %></a></li>
+        <% } %>
+
+        <!-- Botão Próximo -->
+        <li class="page-item <%= pagination.page >= pagination.totalPages ? 'disabled' : '' %>">
+            <a class="page-link" href="/produtos?page=<%= pagination.page + 1 %>" aria-label="Próximo">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+    
+    <div class="text-center text-muted small mt-2">
+        Mostrando página <%= pagination.page %> de <%= pagination.totalPages %> (Total: <%= pagination.totalRegistros %> produtos)
+    </div>
+</nav>
+<% } %>
+
+</main>
+
+                        </div>
+
+                    </form>
+                    <!-- FIM DO FORMULÁRIO -->
+
+                <% } else { %>
+                    <div class="alert alert-warning" role="alert">
+                        Nenhum produto sincronizado encontrado.
+                    </div>
+                <% } %>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS (inclui Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+    <script>
+        feather.replace(); // Para ativar os ícones Feather
+
+    $(document).ready(function() {
+        // Lógica para selecionar/deselecionar todos os checkboxes
+        $('#selectAllCheckbox').on('change', function() {
+            // Se o "Selecionar Todos" estiver marcado, marca todos os checkboxes de produtos
+            // Caso contrário, desmarca todos.
+            // Importante: esta lógica deve considerar apenas os checkboxes VISÍVEIS se o filtro estiver aplicado
+            // ou todos, dependendo do comportamento desejado. Por simplicidade, aqui afeta todos.
+            $('.product-checkbox').prop('checked', $(this).is(':checked'));
+        });
+
+        // Lógica para desmarcar o "Selecionar Todos" se algum item for desmarcado individualmente
+        $('.product-checkbox').on('change', function() {
+            if (!$(this).is(':checked')) {
+                $('#selectAllCheckbox').prop('checked', false);
+            }
+            // Opcional: se todos estiverem marcados individualmente, marcar o "Selecionar Todos"
+            // var allChecked = $('.product-checkbox:not(:checked)').length === 0;
+            // $('#selectAllCheckbox').prop('checked', allChecked);
+        });
+
+
+        const $loadingOverlay = $('#loadingOverlay'); // Cache o seletor
+
+        $('#sendSelectedProductsForm').submit(function(event) {
+            event.preventDefault();
+
+            const selectedProductIds = [];
+            $('input[name="selected_products"]:checked').each(function() {
+                selectedProductIds.push($(this).val());
+            });
+
+            if (selectedProductIds.length === 0) {
+                alert('Por favor, selecione pelo menos um produto para enviar.');
+                return;
+            }
+
+            console.log('Produtos selecionados:', selectedProductIds);
+
+            $loadingOverlay.css('display', 'flex');
+            const $submitButton = $(this).find('button[type="submit"]');
+            $submitButton.prop('disabled', true).find('span[data-feather="send"]').hide();
+            $submitButton.prepend('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ');
+
+            $.ajax({
+                url: $(this).attr('action'),
+                type: $(this).attr('method'),
+                data: {
+                    produtos: selectedProductIds
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Resposta do servidor:',response);
+
+                    alert(response.message  );
+                    window.location.reload(); // Opcional: recarregar
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = 'Erro ao enviar produtos.';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage += ' Detalhe: ' + xhr.responseJSON.error;
+                        if(xhr.responseJSON.details){
+                             errorMessage += ' Especificação: ' + xhr.responseJSON.details;
+                        }
+                    } else {
+                        errorMessage += ' Status: ' + status + ', Erro: ' + error;
+                    }
+                    alert(errorMessage);
+                    console.error('Erro na requisição:', xhr.responseJSON || xhr.responseText);
+                },
+                complete: function() {
+                    $loadingOverlay.hide();
+                    $submitButton.prop('disabled', false).find('.spinner-border').remove();
+                    $submitButton.find('span[data-feather="send"]').show();
+                     feather.replace();
+                }
+            });
+        });
+
+        // --- NOVO SCRIPT PARA FILTRAGEM DA TABELA ---
+        $('#searchInput').on('keyup', function() {
+            const searchTerm = $(this).val().toLowerCase().trim();
+            let rowsFound = 0;
+
+            $('#productsTable tbody tr').each(function() {
+                // Ignora a linha de "nenhum resultado"
+                if ($(this).attr('id') === 'noResultsFound') {
+                    return;
+                }
+
+                const codigoProduto = $(this).find('td:nth-child(3)').text().toLowerCase(); // Coluna "Código"
+                const nomeProduto = $(this).find('td:nth-child(4)').text().toLowerCase(); // Coluna "Nome/Descrição"
+
+                // Verifica se o termo de pesquisa está presente no código OU no nome
+                if (codigoProduto.includes(searchTerm) || nomeProduto.includes(searchTerm)) {
+                    $(this).show();
+                    rowsFound++;
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            // Mostra ou esconde a mensagem de "nenhum resultado"
+            if (rowsFound === 0 && searchTerm !== "") {
+                $('#noResultsFound').show();
+            } else {
+                $('#noResultsFound').hide();
+            }
+
+            // Importante: Ao filtrar, o checkbox "Selecionar Todos" pode ficar em um estado inconsistente
+            // com os itens visíveis. Você pode querer desmarcá-lo ou adicionar lógica para
+            // marcar apenas os visíveis. Por simplicidade, vamos desmarcá-lo se houver filtro.
+            if (searchTerm !== "") {
+                $('#selectAllCheckbox').prop('checked', false);
+            } else {
+                // Se o campo de pesquisa estiver vazio, verificar se todos os itens (agora visíveis)
+                // estão marcados para atualizar o "Selecionar Todos".
+                // Isso é opcional e pode ser complexo dependendo do fluxo desejado.
+                // Uma abordagem mais simples é deixar o usuário gerenciar o "selectAllCheckbox"
+                // independentemente do filtro ou reavaliar seu estado ao limpar o filtro.
+            }
+        });
+        // --- FIM DO SCRIPT DE FILTRAGEM ---
+
+    });
+    </script>
+</body>
+</html>
