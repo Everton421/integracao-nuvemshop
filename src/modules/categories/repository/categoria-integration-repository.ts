@@ -19,8 +19,9 @@ import mysql from 'mysql2/promise'
     nivel:'grupo' | 'subgrupo',
     codigo_erp_pai:number | null,
     nome:string ,
-    parent_id_nuvemshop:string,
+    parent_id_nuvemshop:string | null,
     ultimo_envio:string
+    dados_categoria?:string
  }
 export class CategoriaIntegrationRepository {
 
@@ -43,23 +44,47 @@ export class CategoriaIntegrationRepository {
     async findByErpCodigo(nivel: NivelCategoria, codigo: number): Promise<CategoriaIntegracao[]> {
 
         const sql = `SELECT * FROM ${this.database}.categorias
-                      WHERE nivel = ? AND erp_codigo = ?
+                      WHERE nivel = ? AND codigo_erp = ?
                       LIMIT 1`
 
         const [rows] = await this.connection.query(sql, [nivel, codigo])
         return rows as CategoriaIntegracao[]
     }
  
- 
+    /**
+     * Verifica se a Categoria/SubCategoria já foi enviada.
+     * @param nivel 
+     * @param codigo 
+     * @returns 
+     */
+  async checkCategoryWasSent(nivel: NivelCategoria, codigo: number){
+        
+        const sql = `SELECT id FROM ${this.database}.categorias
+                      WHERE nivel = ? AND codigo_erp = ?
+                      LIMIT 1`
+
+        const [rows] = await this.connection.query(sql, [nivel, codigo])
+          const data = rows as CategoriaIntegracao[];
+            return !!data.length
+    };
+
+
     async insert(inputInsert:inputInsert){
-        const {  id_nuvemshop  , codigo_erp ,  nivel  , codigo_erp_pai   , nome  , parent_id_nuvemshop  , ultimo_envio }= inputInsert;
-        const sql = `INSERT INTO ${this.database}.categorias SET 
+        const {  id_nuvemshop  , codigo_erp ,  nivel  , codigo_erp_pai, dados_categoria , nome  , parent_id_nuvemshop  , ultimo_envio }= inputInsert;
+        let sql = `INSERT INTO ${this.database}.categorias SET 
                    id_nuvemshop = ? , codigo_erp = ?,  nivel = ?, codigo_erp_pai = ? , nome = ?, parent_id_nuvemshop = ?,
                     ultimo_envio = ?
                     `
-                    const values = [  id_nuvemshop  , codigo_erp ,  nivel  , codigo_erp_pai   , nome  , parent_id_nuvemshop  , ultimo_envio  ]
+            const values = [  id_nuvemshop  , codigo_erp ,  nivel  , codigo_erp_pai   , nome  , parent_id_nuvemshop  , ultimo_envio  ];
+
+            if(dados_categoria){
+                sql   += " , dados_categoria = ? "
+                values.push(dados_categoria);
+            }
+
+
           const [resultInsert] = await this.connection.query(sql, values );
-            return resultInsert as ResultSetHeader;
+          return resultInsert as ResultSetHeader;
         }
 
     async partialUpdate(input:  Partial<inputPartialUpdate>, whereClauseField: 'codigo_erp' | 'id' | 'id_nuvemshop', valueWhereClause:  any){
@@ -110,7 +135,11 @@ export class CategoriaIntegrationRepository {
         return resultUpdate as ResultSetHeader;
     }
 
-    async checkShippmentstatus (erp_category_sku:number):Promise<CategoriaIntegracao[]>{
-      return []
+    async checkShippmentstatus ( skuCategoryErp:number, nivel:"grupo" | "subgrupo"):Promise<CategoriaIntegracao[]>{
+        const sql = ` SELECT * FROM  ${this.database}.categorias WHERE codigo_erp = ? and nivel = ? `
+        const [result] = await this.connection.query(sql, [ skuCategoryErp, nivel] );
+         return result  as CategoriaIntegracao[];
     }
+    
+  
 }

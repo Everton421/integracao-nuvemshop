@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuracoes dos Modulos</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+    <!-- jQuery (necessario para os scripts de interacao) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <style>
+        .modulo-card[hidden] {
+            display: none !important;
+        }
+        .card-titulo {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+    </style>
+</head>
+
+<!-- Overlay de Carregamento -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="text-light mt-2">Salvando, por favor aguarde...</p>
+</div>
+
+<body>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="/">INTERSIG</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="#">Sair (opcional)</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <%- include('../components/sidebar', { activePage: 'config' }) %>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-4">
+
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Configuracoes dos Modulos</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                            <span data-feather="refresh-cw"></span>
+                            Recarregar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ALERTA DE RESULTADO -->
+                <div id="alertaConfig" class="alert d-none" role="alert">
+                    <span data-feather="info"></span>
+                    <span id="alertaConfigTexto"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <p class="text-muted">
+                    Configuracoes gravadas em <code>modulo_configuracoes</code>.
+                    As chaves marcadas como <strong>S</strong> estao ligadas.
+                </p>
+
+                <!-- CAMPO DE PESQUISA -->
+                <div class="mb-3">
+                    <input type="text" id="buscaModulo" class="form-control" placeholder="Pesquisar modulo...">
+                </div>
+
+                <%#
+                    config(produtos, 'produtos') | config(precos, 'precos') | ...
+                    Cada bloco abaixo e um modulo. Os campos declarados aqui sao os que
+                    o controller grava em modulo_configuracoes (modulo + chave + valor).
+                %>
+
+                <!-- PRODUTOS -->
+                <div class="card modulo-card mb-4 shadow-sm" data-modulo-card data-modulo="produtos" data-busca="produtos">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                        <h5 class="card-title mb-0 card-titulo"><span data-feather="package"></span> Produtos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-enviar_produtos"
+                                        data-chave="enviar_produtos" data-tipo="bool"
+                                        <%= configuracoes.produtos && configuracoes.produtos.enviar_produtos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="produtos-enviar_produtos">Enviar produtos</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-forcar_atualizacao"
+                                        data-chave="forcar_atualizacao" data-tipo="bool"
+                                        <%= configuracoes.produtos && configuracoes.produtos.forcar_atualizacao === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="produtos-forcar_atualizacao">Forcar atualizacao sem alteracao no ERP</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-enviar_fotos_automatico"
+                                        data-chave="enviar_fotos_automatico" data-tipo="bool"
+                                        <%= configuracoes.produtos && configuracoes.produtos.enviar_fotos_automatico === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="produtos-enviar_fotos_automatico">Enviar fotos logo apos criar o produto</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="produtos-canais_venda">Canais de venda (IDs separados por virgula)</label>
+                                <input type="text" class="form-control" id="produtos-canais_venda"
+                                    data-chave="canais_venda" data-tipo="text"
+                                    value="<%= configuracoes.produtos ? (configuracoes.produtos.canais_venda || '') : '' %>"
+                                    placeholder="vazio = canal padrao da loja">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end bg-light">
+                        <button type="button" class="btn btn-sm btn-primary" data-salvar="produtos">
+                            <span data-feather="save"></span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PRECOS -->
+                <div class="card modulo-card mb-4 shadow-sm" data-modulo-card data-modulo="precos" data-busca="precos precos">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                        <h5 class="card-title mb-0 card-titulo"><span data-feather="dollar-sign"></span> Precos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="precos-tabela_preco">Tabela de preco (codigo no ERP)</label>
+                                <input type="number" step="1" class="form-control" id="precos-tabela_preco"
+                                    data-chave="tabela_preco" data-tipo="number"
+                                    value="<%= configuracoes.precos ? (configuracoes.precos.tabela_preco || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-aplicar_indice"
+                                        data-chave="aplicar_indice" data-tipo="bool"
+                                        <%= configuracoes.precos && configuracoes.precos.aplicar_indice === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="precos-aplicar_indice">Aplicar indice de margem (INDICE)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-considerar_promocao"
+                                        data-chave="considerar_promocao" data-tipo="bool"
+                                        <%= configuracoes.precos && configuracoes.precos.considerar_promocao === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="precos-considerar_promocao">Considerar preco promocional</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-zerar_promocao_vencida"
+                                        data-chave="zerar_promocao_vencida" data-tipo="bool"
+                                        <%= configuracoes.precos && configuracoes.precos.zerar_promocao_vencida === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="precos-zerar_promocao_vencida">Zerar promocao com data vencida</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end bg-light">
+                        <button type="button" class="btn btn-sm btn-primary" data-salvar="precos">
+                            <span data-feather="save"></span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CATEGORIAS -->
+                <div class="card modulo-card mb-4 shadow-sm" data-modulo-card data-modulo="categorias" data-busca="categorias">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                        <h5 class="card-title mb-0 card-titulo"><span data-feather="layers"></span> Categorias</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-somente_ativos"
+                                        data-chave="somente_ativos" data-tipo="bool"
+                                        <%= configuracoes.categorias && configuracoes.categorias.somente_ativos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="categorias-somente_ativos">Somente categorias ativas no site</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-forcar_envio"
+                                        data-chave="forcar_envio" data-tipo="bool"
+                                        <%= configuracoes.categorias && configuracoes.categorias.forcar_envio === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="categorias-forcar_envio">Forcar envio sem alteracao no ERP</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-incluir_subgrupos"
+                                        data-chave="incluir_subgrupos" data-tipo="bool"
+                                        <%= configuracoes.categorias && configuracoes.categorias.incluir_subgrupos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="categorias-incluir_subgrupos">Incluir subgrupos</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="categorias-idiomas">Idiomas do nome (separados por virgula)</label>
+                                <input type="text" class="form-control" id="categorias-idiomas"
+                                    data-chave="idiomas" data-tipo="text"
+                                    value="<%= configuracoes.categorias ? (configuracoes.categorias.idiomas || '') : '' %>"
+                                    placeholder="pt">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end bg-light">
+                        <button type="button" class="btn btn-sm btn-primary" data-salvar="categorias">
+                            <span data-feather="save"></span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ESTOQUE -->
+                <div class="card modulo-card mb-4 shadow-sm" data-modulo-card data-modulo="estoque" data-busca="estoque">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                        <h5 class="card-title mb-0 card-titulo"><span data-feather="archive"></span> Estoque</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="estoque-enviar_estoque"
+                                        data-chave="enviar_estoque" data-tipo="bool"
+                                        <%= configuracoes.estoque && configuracoes.estoque.enviar_estoque === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="estoque-enviar_estoque">Enviar estoque</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="estoque-setor">Setor (codigo do local no ERP)</label>
+                                <input type="number" step="1" class="form-control" id="estoque-setor"
+                                    data-chave="setor" data-tipo="number"
+                                    value="<%= configuracoes.estoque ? (configuracoes.estoque.setor || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="estoque-permitir_negativo"
+                                        data-chave="permitir_negativo" data-tipo="bool"
+                                        <%= configuracoes.estoque && configuracoes.estoque.permitir_negativo === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="estoque-permitir_negativo">Permitir saldo negativo</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="estoque-margem_seguranca">Margem de seguranca (unidades)</label>
+                                <input type="number" step="1" class="form-control" id="estoque-margem_seguranca"
+                                    data-chave="margem_seguranca" data-tipo="number"
+                                    value="<%= configuracoes.estoque ? (configuracoes.estoque.margem_seguranca || '') : '' %>">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end bg-light">
+                        <button type="button" class="btn btn-sm btn-primary" data-salvar="estoque">
+                            <span data-feather="save"></span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PEDIDOS -->
+                <div class="card modulo-card mb-4 shadow-sm" data-modulo-card data-modulo="pedidos" data-busca="pedidos">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                        <h5 class="card-title mb-0 card-titulo"><span data-feather="shopping-cart"></span> Pedidos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-importar_pedidos"
+                                        data-chave="importar_pedidos" data-tipo="bool"
+                                        <%= configuracoes.pedidos && configuracoes.pedidos.importar_pedidos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="pedidos-importar_pedidos">Importar pedidos</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="pedidos-forma_pagamento">Forma de pagamento (codigo no ERP)</label>
+                                <input type="number" step="1" class="form-control" id="pedidos-forma_pagamento"
+                                    data-chave="forma_pagamento" data-tipo="number"
+                                    value="<%= configuracoes.pedidos ? (configuracoes.pedidos.forma_pagamento || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="pedidos-vendedor_pedido">Codigo do vendedor (ERP)</label>
+                                <input type="number" step="1" class="form-control" id="pedidos-vendedor_pedido"
+                                    data-chave="vendedor_pedido" data-tipo="number"
+                                    value="<%= configuracoes.pedidos ? (configuracoes.pedidos.vendedor_pedido || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-atualizar_status"
+                                        data-chave="atualizar_status" data-tipo="bool"
+                                        <%= configuracoes.pedidos && configuracoes.pedidos.atualizar_status === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="pedidos-atualizar_status">Atualizar status do pedido</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-enviar_faturamento"
+                                        data-chave="enviar_faturamento" data-tipo="bool"
+                                        <%= configuracoes.pedidos && configuracoes.pedidos.enviar_faturamento === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="pedidos-enviar_faturamento">Enviar faturamento</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end bg-light">
+                        <button type="button" class="btn btn-sm btn-primary" data-salvar="pedidos">
+                            <span data-feather="save"></span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- INTEGRACAO -->
+                <div class="card modulo-card mb-4 shadow-sm" data-modulo-card data-modulo="integracao" data-busca="integracao">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                        <h5 class="card-title mb-0 card-titulo"><span data-feather="settings"></span> Integracao</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="integracao-intervalo_entre_requisicoes_ms">Intervalo entre requisicoes (ms)</label>
+                                <input type="number" step="50" min="0" class="form-control" id="integracao-intervalo_entre_requisicoes_ms"
+                                    data-chave="intervalo_entre_requisicoes_ms" data-tipo="number"
+                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.intervalo_entre_requisicoes_ms || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="integracao-tentativas_retry">Tentativas em caso de erro</label>
+                                <input type="number" step="1" min="1" class="form-control" id="integracao-tentativas_retry"
+                                    data-chave="tentativas_retry" data-tipo="number"
+                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.tentativas_retry || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="integracao-pagina_tamanho">Registros por pagina nas listagens</label>
+                                <input type="number" step="1" min="1" class="form-control" id="integracao-pagina_tamanho"
+                                    data-chave="pagina_tamanho" data-tipo="number"
+                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.pagina_tamanho || '') : '' %>">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="integracao-reenviar_falhas"
+                                        data-chave="reenviar_falhas" data-tipo="bool"
+                                        <%= configuracoes.integracao && configuracoes.integracao.reenviar_falhas === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="integracao-reenviar_falhas">Reprocessar itens com erro no proximo ciclo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end bg-light">
+                        <button type="button" class="btn btn-sm btn-primary" data-salvar="integracao">
+                            <span data-feather="save"></span> Salvar
+                        </button>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS (inclui Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+
+    <script>
+        feather.replace();
+
+        const $overlay = $('#loadingOverlay');
+
+        function mostrarAlerta(mensagem, tipo) {
+            const classes = {
+                success: 'alert-success',
+                danger: 'alert-danger'
+            };
+
+            $('#alertaConfig')
+                .removeClass('alert-success alert-danger d-none')
+                .addClass(classes[tipo]);
+            $('#alertaConfigTexto').text(mensagem);
+            $('#alertaConfig').removeClass('d-none');
+        }
+
+        /**
+         * Le os campos de um card e monta o corpo do POST /api/config/:modulo.
+         * Booleanos sao enviados como true/false e o controller converte para S/N.
+         */
+        function montarCampos($card) {
+            const campos = {};
+
+            $card.find('[data-chave]').each(function () {
+                const $campo = $(this);
+                campos[$campo.data('chave')] = $campo.data('tipo') === 'bool'
+                    ? $campo.is(':checked')
+                    : $campo.val();
+            });
+
+            return campos;
+        }
+
+        $(document).ready(function () {
+
+            $('[data-salvar]').on('click', function () {
+                const modulo = $(this).data('salvar');
+                const $card = $('[data-modulo-card][data-modulo="' + modulo + '"]');
+                const $botao = $(this).prop('disabled', true);
+                $overlay.css('display', 'flex');
+
+                $.ajax({
+                    url: '/api/config/' + modulo,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    data: JSON.stringify(montarCampos($card)),
+                    success: function (resposta) {
+                        mostrarAlerta(resposta.msg || 'Configuracoes salvas.', 'success');
+                    },
+                    error: function (xhr) {
+                        const corpo = xhr.responseJSON || {};
+                        mostrarAlerta(corpo.error || 'Erro ao salvar configuracoes.', 'danger');
+                    },
+                    complete: function () {
+                        $overlay.hide();
+                        $botao.prop('disabled', false);
+                        feather.replace();
+                    }
+                });
+            });
+
+            // Filtra os cards pelo nome do modulo
+            $('#buscaModulo').on('keyup', function () {
+                const termo = $(this).val().toLowerCase().trim();
+
+                $('.modulo-card').each(function () {
+                    const texto = String($(this).data('busca')).toLowerCase();
+                    $(this).prop('hidden', termo !== '' && texto.indexOf(termo) === -1);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

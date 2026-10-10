@@ -1,62 +1,48 @@
 import { Router } from "express";
-
 import 'dotenv/config';
-import { database_api } from "../database/database-connection.ts";
-import { seed } from "../database/seed.ts";
-import { AuthController } from "../modules/authorization/auth-controller.ts";
-import { ConfiguracoesIntegration } from "../modules/config-integration/configuracoes-integration-repository.ts";
-import { GetLocation } from "../modules/inventory/service/get-location-service.ts";
-import { LocaisIntegration } from "../modules/inventory/repository/locais-integration-repository.ts";
-import { PedidoIntegration } from "../modules/orders/repository/pedido-integration.ts";
-import { FotosProdutoIntegration } from "../modules/photos/repository/photos-products-repository.ts";
-import { PgImagensProdutos } from "../modules/photos/repository/postgres-images-repository.ts";
-import { PrecoController } from "../modules/pricing/controller/preco-controller.ts";
-import { ProdutoController } from "../modules/products/controller/produto-controller.ts";
-import { CategoriaController } from "../modules/categories/controller/categoria-controller.ts";
-import { GetPublications } from "../modules/sales-channels/get-sales-channels.ts";
-import { CanaisVendaIntegration } from "../modules/sales-channels/sales-channels-repository.ts";
-import { ErpPriceRepository } from "../modules/pricing/repository/erp-price-repository.ts";
-import { ErpInventoryRepository } from "../modules/inventory/repository/erp-inventory-repository.ts";
-import { LogsIntegration } from "../modules/logs/log-integration.ts";
-import { FpgtRepositoty } from "../modules/orders/repository/forma-pagemento-repository.ts";
-import { IntelipostListController } from "../modules/intelipost/intelipost-list-controller.ts";
-import { ProductErpRepository } from "../modules/products/repository/produto-repository.ts";
-import { PedidoController } from "../modules/orders/controller/pedido-controller.ts";
-import { EstoqueController } from "../modules/inventory/controller/estoque-controller.ts";
-import { AppmaxValidationController } from "../modules/app-max/web/appmax-validation.controller.ts";
-import { AppmaxCallbackController } from "../modules/app-max/web/appmax-callback.controller.ts";
-import { AppMaxIndexController } from "../modules/app-max/web/appmax-index.controller.ts";
-
+import { ConfigController } from "../modules/config/controller/config-controller.ts";
 const router = Router();
 
 
 
 router.get('/', async (req, res) => {
-    if (database_api) {
-        const resultSeed = await seed()
-        console.log(resultSeed)
-    } else {
-        throw new Error("Nome do banco de dados nao foi definido.")
-    }
-    const objConfigurcoes = new ConfiguracoesIntegration();
-    const dados = await objConfigurcoes.select();
+    //if (database_api) {
+    //    const resultSeed = await seed()
+    //    console.log(resultSeed)
+    //} else {
+    //    throw new Error("Nome do banco de dados nao foi definido.")
+    //}
+    //const objConfigurcoes = new ConfiguracoesIntegration();
+    //const dados = await objConfigurcoes.select();
+//
+    //if (!dados.length) {
+    //    await objConfigurcoes.insert({
+    //        enviar_estoque: 'N',
+    //        enviar_preco: 'N',
+    //        enviar_produtos: 'N',
+    //        forma_pagamento: '0',
+    //        importar_pedidos: 'N',
+    //        vendedor_pedido: 0
+    //    })
+    //}
 
-    if (!dados.length) {
-        await objConfigurcoes.insert({
-            enviar_estoque: 'N',
-            enviar_preco: 'N',
-            enviar_produtos: 'N',
-            forma_pagamento: '0',
-            importar_pedidos: 'N',
-            vendedor_pedido: 0
-        })
-    }
-
-    res.render('index', { dados: dados[0] });
+    res.render('index', 
+    //    { dados: dados[0] }
+    );
 
 
 })
 
+/**
+ * Modulo config: configuracoes registradas pelo usuario para cada modulo.
+ */
+const configController = new ConfigController()
+
+router.get('/config', (req, res) => configController.index(req, res))
+router.post('/api/config/:modulo', (req, res) => configController.save(req, res))
+
+
+/*
 //router.post('/produto/single-update', new ProdutoController().syncSingleProduct)
 
 router.get('/produtos', new ProdutoController().allProducts);
@@ -345,32 +331,7 @@ router.get('/fotos', async (req, res) => {
     });
 });
 
-router.get('/auth', new AuthController().auth);
-
-router.get('/auth/callback', new AuthController().callback);
-
-const intelipostController = new IntelipostListController();
-router.get('/intelipost/envios', (req, res) => intelipostController.listarPedidos(req, res));
-router.post('/api/intelipost/enviar-lote', (req, res) => intelipostController.enviarLote(req, res));
-
-// Health check público exigido pela Appmax no /app/client/generate:
-// deve responder 200 + {"external_id":"<UUID>"}. GET e POST porque a Appmax
-// pode chamar de qualquer método conforme o cadastro da URL de validação.
-const appmaxValidationController = new AppmaxValidationController();
-router.get('/appmax/validate', (req, res) => appmaxValidationController.validate(req, res));
-router.post('/appmax/validate', (req, res) => appmaxValidationController.validate(req, res));
-
-
-const appmaxCallbackController = new AppmaxCallbackController();
-// Rota raiz ou a rota exata definida no APPMAX_REDIRECT_URL
-router.get('/appmax/callback', (req, res) => appmaxCallbackController.handleCallback(req, res));
-// Caso a Appmax envie via POST em algum cenário:
-router.post('/appmax/callback', (req, res) => appmaxCallbackController.handleCallback(req, res));
-
-
-const appMaxIndexController = new AppMaxIndexController();
-router.get('/appmax', (req, res)=> appMaxIndexController.index(req, res));
-
+ */
 
 export { router };
 

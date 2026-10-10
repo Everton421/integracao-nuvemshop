@@ -1,274 +1,83 @@
-import {type cad_pgru } from "../../../shared/interfaces/cad_pgru.ts";
-import { type ICompleteProduct, type IProductSystem } from "../../../shared/interfaces/cad_prod.ts";
-import {type subgrupos } from "../../../shared/interfaces/subgrupos.ts";
+import mysql from 'mysql2/promise';
 
- import mysql from 'mysql2/promise';
+export type typeCompleteProduct = {
+                CODIGO: number,
+                CUSTO_MEDIO: number 
+                ULT_CUSTO: number ,
+                LARGURA: number,
+                PESO: number,
+                GARANTIA: number,
+                COMPRIMENTO: number,
+                ALTURA: number,
 
-type resultCodeProduct = {
-  codigo: number
+                PRECO?:string
+                PROMOCAO?:string
+                VALID_PROM?:string,
+
+                DATA_RECAD:string,
+                DESCR_CURTA_SITE:string,
+                DESCR_LONGA_SITE:string,
+                APLICACAO_SITE:string,
+                TITULO_SITE:string,
+                ORIGEM:string,
+                NUM_FABRICANTE:string,
+                MARCA:string,
+                SUBCATEGORIA:string,
+                CODIGO_SUBCATEGORIA:number
+                CODIGO_CATEGORIA:number
+                CATEGORIA:string,
+                NO_SITE:"S" | "N",
+                ATIVO:"S" | "N",
+          
 }
- 
-type resultIsDisabledProductSite = {
-  CODIGO: number
-  id_produto_pai: string
-  PRODUTO_NO_SITE: 'S' | 'N' | null
-  variante_id: string
-  SUBGRUPO_NO_SITE: 'S' | 'N' | null
-  GRUPO_NO_SITE: 'S' | 'N' | null
-}
 
+
+type resultQueryProductsForShipping  = {
+        CODIGO_ERP:number
+        DATA_RECAD:string
+        DATA_ULTIMO_ENVIO: string | null 
+       id:number | null
+       id_produto_nuvemshop: number | null,
+       id_variante_nuvemshop: number | null
+}
+type typeStockProduct = { 
+  CODIGO:number,
+  ESTOQUE:number
+}
 export class ProductErpRepository {
 
-        private database_api:string;
-        private conn2:mysql.Pool
-        private db_estoque:string  
-        private db_publico:string   
-        private db_vendas:string
-      constructor(     
-          conn2:mysql.Pool,
-          database_api:string,
-          db_estoque:string,  
-          db_publico:string,  
-          db_vendas:string
-        ){
-        this.conn2= conn2 
-        this.database_api= database_api 
-        this.db_estoque= db_estoque 
-        this.db_publico= db_publico 
-        this.db_vendas= db_vendas 
-      }
+    private databasePublico:string ; 
+    private connection: mysql.Pool;
+    private databaseIntegration: string;
+    private databaseEstoque:string
+    private databaseVendas:string
 
+    constructor( connection:mysql.Pool, databasePublico:string, databaseIntegration: string, databaseEstoque:string, databaseVendas:string){
+        this.connection = connection
+        this.databasePublico= databasePublico
+        this.databaseIntegration = databaseIntegration
+        this.databaseEstoque=databaseEstoque
+        this.databaseVendas=databaseVendas;
+    }
+ 
 
- /*
-
-async findGroupErp(){
-    const [ result ] =await conn2.query(`SELECT * FROM ${db_publico}.cad_pgru WHERE ATIVO = 'S' AND NO_SITE = 'S' ORDER BY CODIGO ; `)
-    return result  as cad_pgru[]
-}
-async findSubGroupErp(){
-    const [ result ] =await conn2.query(`SELECT * FROM ${db_publico}.subgrupos WHERE     NO_SITE = 'S' ORDER BY CODIGO; `)
-    return result  as subgrupos[]
-}
   /**
-   *  retorna uma lista com os codigos dos produtos do erp com base na query
-   * @param query = syncStatus, updated_at, codigo, limit, offset , priceTable  
+   * Retorna dados de um produto.
+   * @param codeProduct Código do produto no ERP.
+   * @param ativo   Ativo 'S' = sim, 'N' = Inativo. Default( 'S' ).
+   * @param priceTable Código da tabela de preços ( OPCIONAL)
    * @returns 
    */
-async findCodeProductErpUpdatedAt(query: {
-    updated_at?: string,
-    syncStatus?: 'not_synced' | 'synced',
-    codigo?: number,
-    limit?: number,
-    offset?: number,
-    priceTable?: number }) {
-        const { syncStatus, updated_at, codigo, limit, offset , priceTable} = query;
-
-        let sql = `select p.codigo 
-                    FROM ${this.db_publico}.cad_prod p
-                          JOIN ${db_publico}.cad_pgru cg ON cg.CODIGO = p.GRUPO
-                        LEFT JOIN ${db_publico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO
-                      LEFT JOIN ${this.database_api}.variantes v on v.erp_sku = p.CODIGO 
-                      `;
-
-
-        let whereClause = " WHERE  p.ATIVO='S'    AND cg.NO_SITE = 'S' AND sg.NO_SITE = 'S'  ";
-
-        if (priceTable && priceTable > 0) {
-          sql += ` LEFT JOIN ${db_publico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO `;
-          whereClause +=`  AND tp.tabela = ${priceTable} `; 
-        }
-
-        if (syncStatus === 'not_synced') {
-          whereClause += " AND v.id_produto_pai IS NULL ";
-        } else if (syncStatus === 'synced') {
-          whereClause += " AND v.id_produto_pai IS NOT NULL ";
-        }
-
-        const values = []
-        if (updated_at) {
-          whereClause += "  AND p.DATA_RECAD > ?";
-          values.push(updated_at);
-        }
-        if (codigo && codigo > 0) {
-          whereClause += "  AND p.CODIGO  = ?";
-          values.push(codigo)
-        }
-
-
-        // Adicionando ordenação consistente para a paginação não repetir itens
-        let finalSql = sql + whereClause + " ORDER BY p.codigo ASC ";
-
-        if (limit !== undefined && offset !== undefined) {
-          finalSql += " LIMIT ? OFFSET ? ";
-          values.push(limit, offset);
-        }
-        const [arrResult] = await conn2.query(finalSql, values);
-
-        return arrResult as resultCodeProduct[];
-  }
-
-
-/**
- *  retorna a quantidade de produtos no erp com base na consulta. 
- * @param query priceTable?: number, search?: string, syncStatus?: string
- * @returns total: number
- */
-  async countTotalProductsErp(query: { priceTable?: number, search?: string, syncStatus?: string , ativo?:'S' | 'N'} ): Promise<number> {
-    const { priceTable, search, syncStatus,ativo } = query;
-
-    let sql = `
-            SELECT COUNT(DISTINCT p.CODIGO) as total
-            FROM ${db_publico}.cad_prod p
-                 JOIN ${db_publico}.cad_pgru cg ON cg.CODIGO = p.GRUPO
-            LEFT JOIN ${db_publico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO
-
-            LEFT JOIN ${this.database_api}.variantes v on v.erp_sku = p.CODIGO 
-
-        `;
-    let whereClause = " WHERE  cg.NO_SITE = 'S' AND sg.NO_SITE = 'S'";
-    const values = [];
-
-    if(ativo){
-      whereClause+=` AND  p.ATIVO = '${ativo}' `
-    }
-
-    if (priceTable) {
-      sql += ` LEFT JOIN ${db_publico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO AND tp.tabela = ${priceTable} `;
-    }
-
-    if (search) {
-      whereClause += ` AND (p.CODIGO LIKE ? OR p.DESCRICAO LIKE ? OR p.SKU_MKTPLACE LIKE ?) `;
-      const term = `%${search}%`;
-      values.push(term, term, term);
-    }
-
-    if (syncStatus === 'not_synced') {
-      whereClause += " AND v.id_produto_pai IS NULL ";
-    } else if (syncStatus === 'synced') {
-      whereClause += " AND v.id_produto_pai IS NOT NULL ";
-    }
-
-    const finalSql = sql + whereClause
-   
-    const [rows] = await conn2.query(finalSql, values) as any;
-
-    return rows
-
-  }
-
-  /**
-   * Obtem uma lista de produtos com os campos necessarios para enviar para shopify
-   * @param query updated_at: string, priceTable: number, syncStatus?: 'not_synced' | 'synced'
-   * @returns ICompleteProduct[]
-   */
-  async findCompleteProductErpUpdatedAt(query: { updated_at: string, priceTable: number, syncStatus?: 'not_synced' | 'synced' } ): Promise<ICompleteProduct[]> {
-    const  { priceTable, updated_at, syncStatus    } = query;
-    let baseSql = `SELECT
-                p.CODIGO,
-                p.OUTRO_COD,
-                coalesce(DATE_FORMAT(p.DATA_RECAD, '%Y-%m-%d %H:%i:%s') ,'0000-00-00 00:00:00') AS DATA_RECAD,
-                p.SKU_MKTPLACE,
-                p.DESCR_CURTA_MKTPLACE,
-                p.DESCR_LONGA_MKTPLACE,
-                p.DESCR_CURTA_SITE,
-                p.DESCR_LONGA_SITE,
-                p.APLICACAO_SITE,
-                p.TITULO_SITE,
-                p.DESCRICAO,
-                CAST(p.APLICACAO AS CHAR(10000) CHARACTER SET latin1) AS APLICACAO,
-                p.GARANTIA,
-                p.PESO,
-                p.LARGURA,
-                p.ALTURA,
-                p.COMPRIMENTO,
-                p.ORIGEM,
-                p.NUM_FABRICANTE,
-                p.NO_SITE,
-                p.ATIVO,
-                coalesce(tp.PRECO, 0 ) PRECO ,
-                coalesce(tp.PROMOCAO, 0 ) PROMOCAO, 
-                DATE_FORMAT(tp.VALID_PROM, '%Y-%m-%d') as VALID_PROM,
-                m.descricao AS MARCA,
-                sg.DESCRICAO AS SUBCATEGORIA,                
-                cg.NOME AS CATEGORIA,
-                pc.INDEXADO,
-                v.id_produto_pai,
-                v.variante_id
-            FROM ${db_publico}.cad_prod p
-              JOIN ${db_publico}.cad_pgru cg ON cg.CODIGO = p.GRUPO
-            LEFT JOIN ${db_publico}.cad_pmar m ON m.codigo = p.marca
-            LEFT JOIN ${db_publico}.class_fiscal cf ON cf.CODIGO = p.CLASS_FISCAL
-            LEFT JOIN ${db_publico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO AND cg.CODIGO = sg.COD_GRUPO
-            
-            LEFT JOIN ${db_publico}.prod_custos pc on (pc.PRODUTO = p.CODIGO) AND (pc.FILIAL = 2)
-            LEFT JOIN ${this.database_api}.variantes v on v.erp_sku = p.CODIGO 
-           LEFT JOIN ${db_publico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO and tp.tabela = ${priceTable} 
-        `;
-
-
-    const groupBy = " GROUP BY p.CODIGO  ORDER BY p.CODIGO ;";
-
-    let whereClause = " where   cg.NO_SITE = 'S' AND sg.NO_SITE = 'S' ";
-    const values = [];
-
-    whereClause += " AND p.DATA_RECAD >  ? ";
-    values.push(`${updated_at}`);
-
-    if (syncStatus === 'not_synced') {
-      whereClause += " AND v.id_produto_pai IS NULL ";
-    } else if (syncStatus === 'synced') {
-      whereClause += " AND v.id_produto_pai IS NOT NULL ";
-    }
-    const finalSql = baseSql + whereClause + groupBy;
-    const [rows] = await conn2.query(finalSql, values) as any;
-    return rows
-  }
-  
-/**
- *  Retorna a quantidade de produtos encontrados no erp com base na consulta.
- * @param query syncStatus?: 'not_synced' | 'synced', updated_at?: string 
- * @returns total: number
- */
-  async countProductsToSync(query: { syncStatus?: 'not_synced' | 'synced', updated_at?: string }) {
-    const { syncStatus, updated_at } = query;
-    let sql = `SELECT COUNT(p.codigo) as total 
-               FROM ${db_publico}.cad_prod p
-                  LEFT JOIN ${db_publico}.cad_pgru cg ON cg.CODIGO = p.GRUPO
-                  LEFT JOIN ${db_publico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO
-                  LEFT JOIN ${this.database_api}.variantes v on v.erp_sku = p.CODIGO 
-               WHERE p.ATIVO='S'`;
-
-    if (syncStatus === 'not_synced') sql += " AND v.id_produto_pai IS NULL ";
-    else if (syncStatus === 'synced') sql += " AND v.id_produto_pai IS NOT NULL ";
-
-    sql += " AND    cg.NO_SITE = 'S' AND sg.NO_SITE = 'S' "
-    const [result]: any = await conn2.query(sql);
-    return result[0].total as number;
-  }
- 
-  /**
-   * Retorna um produto com os campos necessarios para enviar para shopify, consulta feita 
-   * pelo codigo do produto e tabela dae preço. OBS: priceTable opcional.
-   * @param codeProduct codigo do produto
-   * @param priceTable codigo da tabela de preço
-   * @returns ICompleteProduct[]
-   */
-  async findSingleCompleteErpProduct(codeProduct: number, priceTable?: number, ativo?: 'S' | 'N'  ): Promise<ICompleteProduct[]> {
+  async findSingleCompleteErpProduct(codeProduct: number, ativo: 'S' | 'N'= 'S' , priceTable?: number ): Promise<typeCompleteProduct[]> {
 
 
     let baseSql = `SELECT
                 p.CODIGO,
-                p.OUTRO_COD,
                 coalesce(DATE_FORMAT(p.DATA_RECAD, '%Y-%m-%d %H:%i:%s') ,'0000-00-00 00:00:00') AS DATA_RECAD,
-                p.SKU_MKTPLACE,
-                p.DESCR_CURTA_MKTPLACE,
-                p.DESCR_LONGA_MKTPLACE,
                 p.DESCR_CURTA_SITE,
                 p.DESCR_LONGA_SITE,
                 p.APLICACAO_SITE,
                 p.TITULO_SITE,
-                p.DESCRICAO,
-                CAST(p.APLICACAO AS CHAR(10000)  CHARACTER SET latin1) AS APLICACAO,
                 p.GARANTIA,
                 p.COMPRIMENTO,
                 p.LARGURA,
@@ -279,25 +88,19 @@ async findCodeProductErpUpdatedAt(query: {
                 p.ATIVO,
                 p.NUM_FABRICANTE,
                 m.descricao AS MARCA,
-                cf.NCM,
+                sg.CODIGO as CODIGO_SUBCATEGORIA,
                 sg.DESCRICAO AS SUBCATEGORIA,
                 cg.NOME AS CATEGORIA,
-                pc.INDEXADO,
-                 isv.id_produto_pai,
-                isv.variante_id
-                   
-                
-            `
-
-    let middleOfSql = `
-                     FROM ${db_publico}.cad_prod p
-                    LEFT JOIN ${db_publico}.cad_pmar m ON m.codigo = p.marca
-                    LEFT JOIN ${db_publico}.class_fiscal cf ON cf.CODIGO = p.CLASS_FISCAL
-                    LEFT JOIN ${db_publico}.cad_pgru cg ON cg.CODIGO = p.GRUPO
-                    LEFT JOIN ${db_publico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO  AND cg.CODIGO = sg.COD_GRUPO
-                    LEFT JOIN ${db_publico}.prod_custos pc on (pc.PRODUTO = p.CODIGO) AND (pc.FILIAL = 2)
-                    LEFT JOIN ${this.database_api}.produtos isp on isp.erp_sku = p.CODIGO
-                    LEFT JOIN ${this.database_api}.variantes isv on isv.erp_sku = p.CODIGO 
+                cg.CODIGO as CODIGO_CATEGORIA,
+                pc.ULT_CUSTO ,
+                pc.CUSTO_MEDIO  `
+          
+      let middleOfSql = `
+                     FROM ${this.databasePublico}.cad_prod p
+                    LEFT JOIN ${this.databasePublico}.cad_pmar m ON m.codigo = p.marca
+                    LEFT JOIN ${this.databasePublico}.cad_pgru cg ON cg.CODIGO = p.GRUPO
+                    LEFT JOIN ${this.databasePublico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO  AND cg.CODIGO = sg.COD_GRUPO
+                    LEFT JOIN ${this.databasePublico}.prod_custos pc on (pc.PRODUTO = p.CODIGO) AND (pc.FILIAL = 2)
               `
 
     const conditions = []
@@ -310,9 +113,9 @@ async findCodeProductErpUpdatedAt(query: {
       baseSql += `,coalesce(tp.PRECO, 0 ) PRECO,
                 coalesce(tp.PROMOCAO, 0) PROMOCAO ,
                 DATE_FORMAT(tp.VALID_PROM, '%Y-%m-%d') as VALID_PROM` 
-      middleOfSql += ` LEFT JOIN ${db_publico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO  and tp.tabela = ${priceTable} `;
+      middleOfSql += ` LEFT JOIN ${this.databasePublico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO  and tp.tabela = ${priceTable} `;
     } else {
-      middleOfSql += ` LEFT JOIN ${db_publico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO  `;
+      middleOfSql += ` LEFT JOIN ${this.databasePublico}.prod_tabprecos tp ON p.CODIGO = tp.PRODUTO  `;
     }
 
     if(ativo){
@@ -327,85 +130,87 @@ async findCodeProductErpUpdatedAt(query: {
     values.push(  'S', 'S');
 
     const finalSql = baseSql + middleOfSql + whereClause + conditions.join(' AND ') + groupBy;
-    const [rows] = await conn2.query(finalSql, values) as any;
+    const [rows] = await this.connection.query(finalSql, values) as any;
 
     return rows;
   }
 
-
   /**
-   * Obtem uma lista de produtos do erp alterado após a data informada.
-   * @param updated_at 
-   * @returns IProductSystem[]
+   * Traz informações de produtos que precisam de update na nuvemshop.
+   * @param isUpdate determina se deve ser comparado a data de ultimo envio com a data de atualização do sistema.
+   * @returns 
    */
-  async findProductsErp(updated_at?: string): Promise<IProductSystem[]> {
-    let baseSql = ` 
-                            SELECT * FROM ${db_publico}.cad_prod  WHERE
-                            `;
-    let finalSql = baseSql;
+  async findProductsForShipping(isUpdate:boolean = true): Promise<resultQueryProductsForShipping[]>{
 
-    finalSql = baseSql + ` ATIVO = 'S' `;
-    if (updated_at) {
-      finalSql = baseSql + ` AND  DATA_RECAD > ${updated_at};`
+  let baseSql = `
+    SELECT 	
+      cp.CODIGO as CODIGO_ERP,
+      cp.DATA_RECAD as DATA_RECAD,
+      ip.updated_at as DATA_ULTIMO_ENVIO,
+      ip.id,
+      ip.id_produto_nuvemshop,
+      ip.id_variante_nuvemshop
+    FROM 
+      ${this.databasePublico}.cad_prod cp
+     left join ${this.databaseIntegration}.produtos ip on ip.codigo_erp = cp.CODIGO
+    WHERE ATIVO ='S' AND NO_SITE='S'  AND cp.codigo  < 1000
+    `;
+    if(isUpdate){
+      baseSql += ` AND  ( cp.DATA_RECAD > ip.ultimo_envio_produto OR ip.id is null ) `;
     }
-    const [rows] = await conn2.query(finalSql);
-    return rows as any;
-
+    const [rows] = await this.connection.query(baseSql );
+    return rows as resultQueryProductsForShipping[];
   }
 
-  /**
-   * Obtem um produto do erp, consulta feita pelo codigo.
-   * @param codigo 
-   * @returns IProductSystem[] 
-   */
-  async findByCodeProductErp(codigo: number): Promise<IProductSystem[]> {
-    let sql = `SELECT * FROM ${db_publico}.cad_prod WHERE     CODIGO = ${codigo};`;
-    const [rows] = await conn2.query(sql);
-    return rows as any
-  }
-
-
-  /**
-   * Retorna uma lista de  produtos do erp que não pode ir para o site.
-   * @param param0 
-   * @returns resultIsDisabledProductSite[]
-   */
-  async findProductsToInactivateSite(   limit?:number, offset?:number  ): Promise<resultIsDisabledProductSite[]> {
     
+  async findStock(product?:number):Promise<typeStockProduct[]>{
+   let sql= `SELECT
+                    P.CODIGO,
+                    GREATEST(COALESCE(EST.ESTOQUE_TOTAL, 0) - COALESCE(RES.RESERVADO, 0), 0) AS ESTOQUE
+                FROM ${this.databasePublico}.cad_prod P
+                LEFT JOIN (
+                    SELECT
+                        PS.PRODUTO,
+                        MAX(PS.DATA_RECAD) AS DATA_RECAD,
+                        SUM(PS.ESTOQUE) AS ESTOQUE_TOTAL
+                    FROM ${this.databaseEstoque}.prod_setor PS
+                    WHERE PS.SETOR IN (
+                        -- Usando DISTINCT para evitar duplicar linhas caso o setor esteja em mais de uma empresa
+                        SELECT DISTINCT S.SETOR
+                        FROM ${this.databaseVendas}.empresas_setor S
+                        WHERE S.EST_ATUAL = 'X'   AND  S.EST_REAL = 'X' 
+                    )
+                    GROUP BY PS.PRODUTO
+                ) EST ON EST.PRODUTO = P.CODIGO
 
-    let baseSql = `
-       SELECT
-                p.CODIGO,
-                isv.id_produto_pai,
-                isv.variante_id ,
-                p.NO_SITE PRODUTO_NO_SITE,
-                sg.NO_SITE SUBGRUPO_NO_SITE,
-                cg.NO_SITE GRUPO_NO_SITE
-                     FROM ${db_publico}.cad_prod p
-                     JOIN ${this.database_api}.variantes isv on isv.erp_sku = p.CODIGO 
-                     JOIN ${db_publico}.cad_pgru cg ON cg.CODIGO = p.GRUPO 
-                    LEFT JOIN ${db_publico}.subgrupos sg ON sg.CODIGO = p.SUBGRUPO 
-                      WHERE 
-                      p.ATIVO='S'   
-							AND ( p.NO_SITE = 'N' OR cg.NO_SITE = 'N' OR sg.NO_SITE = 'N' )`;
-    
-        if (limit !== undefined && offset !== undefined) {
-          baseSql += ` LIMIT ${limit} OFFSET ${offset} `;
-        }
+                -- 2. Subconsulta de RESERVAS em orçamentos pendentes
+                LEFT JOIN (
+                    SELECT
+                        PO.PRODUTO,
+                            SUM(
+												LEAST(PO.QTDE_SEPARADA, GREATEST(PO.QUANTIDADE - PO.QTDE_MOV, 0))
+												* PO.FATOR_QTDE
+												* IF(CO.TIPO = '5', -1, 1)
+										) AS RESERVADO
+                    FROM ${this.databaseVendas}.cad_orca CO
+                    INNER JOIN ${this.databaseVendas}.pro_orca PO ON PO.ORCAMENTO = CO.CODIGO
+                    WHERE CO.SITUACAO IN ('AI','AP','FP')
+                    GROUP BY PO.PRODUTO
+                ) RES ON RES.PRODUTO = P.CODIGO
 
-        const [rows] = await conn2.query(baseSql)
-    return rows as resultIsDisabledProductSite[]
+                WHERE P.ATIVO = 'S' 
+            `
+
+          if(product){
+            sql += ` AND P.CODIGO = ${product}` 
+          }
+
+    const [rows] = await this.connection.query(sql );
+    return rows as typeStockProduct[];
   }
-
-  // async findProductsShippedWhithStock():Promise<[{erp_sku:number, shopify_product_id:string}]>{
-  //     const sql = `
-  //     SELECT 
-  //       
-  //     `
-  // }
-
+ 
   async acquireLock(sku: number, timeout = 30): Promise<boolean> {
-    const [rows]: any = await conn2.query(
+    const [rows]: any = await this.connection.query(
       `SELECT GET_LOCK(?, ?) as result`,
       [`sync_produto_${sku}`, timeout]
     );
@@ -413,7 +218,7 @@ async findCodeProductErpUpdatedAt(query: {
   }
 
   async releaseLock(sku: number): Promise<boolean> {
-    const [rows]: any = await conn2.query(
+    const [rows]: any = await this.connection.query(
       `SELECT RELEASE_LOCK(?) as result`,
       [`sync_produto_${sku}`]
     );

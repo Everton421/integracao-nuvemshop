@@ -9,9 +9,26 @@
     "dev": "node --env-file .env --watch --experimental-strip-types src/server.ts",
     "start": "node --env-file .env  --experimental-strip-types src/server.ts",
     
-    "test:create-product": "node --env-file .env   --experimental-strip-types src/modules/products/__test__/create-product.test.ts", 
-    "test:mapping-category": "node --env-file .env   --experimental-strip-types src/modules/categories/__test__/mapping-category-to-post.test.ts",
-    "test:sync-category": "node --env-file .env  --experimental-strip-types src/modules/categories/__test__/sync-category-service.test.ts"
+    
+
+    "test:mapping-category": "node --env-file .env.test   --experimental-strip-types src/modules/categories/__test__/mapping-category-to-post.test.ts",
+    "test:sync-category": "node --env-file .env.test  --experimental-strip-types src/modules/categories/__test__/sync-category-service.test.ts",
+    "test:inventory-service": "node --env-file .env.test  --experimental-strip-types src/modules/inventory/__test__/inventory-service.test.ts",
+    "test:photos-service": "node --env-file .env.test  --experimental-strip-types src/modules/photos/__test__/photos-service.test.ts",
+    
+    "test:create-product": "node --env-file .env.test   --experimental-strip-types src/modules/products/__test__/create-product.test.ts", 
+    "test:sql-products": "node --env-file .env.test   --experimental-strip-types src/modules/products/__test__/sql-product.test.ts", 
+
+    "test:script-sync-categories": "node --env-file .env.test  --experimental-strip-types src/modules/categories/scripts/script-sync-categories.ts", 
+    "test:script:sync-products": "node --env-file .env.test   --experimental-strip-types src/modules/products/scripts/scripts-sync-products.ts",
+   
+    "script:sync-categories": "node --env-file .env  --experimental-strip-types src/modules/categories/scripts/script-sync-categories.ts", 
+    "script:sync-products": "node --env-file .env   --experimental-strip-types src/modules/products/scripts/scripts-sync-products.ts",
+
+    "script:sync-stock": "node --env-file .env   --experimental-strip-types src/modules/inventory/scripts/inventory-script-stock.ts",
+    "script:sync-price": "node --env-file .env   --experimental-strip-types src/modules/inventory/scripts/inventory-script-price.ts" 
+
+
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.8",

@@ -22,7 +22,58 @@ export async function seed(){
           UNIQUE KEY categoria_erp  ( nivel , codigo_erp ),
           KEY id_nuvemshop  ( id_nuvemshop ) 
         ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4; `,
-
+         `
+         CREATE TABLE IF NOT EXISTS ${database_integration}.modulo_configuracoes (
+          id  int(11) NOT NULL AUTO_INCREMENT,
+          modulo  varchar(50) NOT NULL COMMENT 'chave logica do modulo, ex.: categorias',
+          chave  varchar(100) NOT NULL COMMENT 'parametro configuravel, ex.: tabela_preco',
+          valor  varchar(500) DEFAULT NULL,
+          created_at  timestamp NOT NULL DEFAULT current_timestamp(),
+          updated_at  timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          PRIMARY KEY ( id ),
+          UNIQUE KEY uk_modulo_chave  ( modulo , chave ),
+          KEY idx_modulo  ( modulo )
+        ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4; `,
+         `
+         CREATE TABLE IF NOT EXISTS ${database_integration}.produtos (
+           id int(11) NOT NULL AUTO_INCREMENT,
+           id_variante_nuvemshop varchar(255) DEFAULT NULL COMMENT 'Id da veriante na nuvenshop',
+           codigo_erp int(11) NOT NULL COMMENT 'Código da veriante no sistema',
+           nome varchar(255) NOT NULL,
+           dados_variante longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'JSON da variante enviada',
+           dados_produto longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'JSON do produto enviado',
+           preco decimal(10,2) DEFAULT 0.00 COMMENT 'Preço enviado',
+           promocao decimal(10,2) DEFAULT 0.00 COMMENT 'Preço promocional enviado',
+           estoque decimal(10,2) DEFAULT 0.00 COMMENT 'estoque enviado',
+           ultimo_envio_estoque datetime DEFAULT '2001-01-01 01:00:00' COMMENT 'Data do último envio de estoque',
+           ultimo_envio_preco datetime DEFAULT '2001-01-01 01:00:00' COMMENT 'Data do último envio do preço',
+           ultimo_envio_produto datetime DEFAULT '2001-01-01 01:00:00' COMMENT 'Data do último envio do produto',
+           created_at timestamp NOT NULL DEFAULT current_timestamp(),
+           updated_at timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+           id_produto_nuvemshop varchar(255) DEFAULT NULL,
+          PRIMARY KEY ( id ),
+          UNIQUE KEY  codigo_erp  ( codigo_erp ),
+          KEY  id_nuvemshop  ( id_variante_nuvemshop )
+        ) ENGINE=InnoDB AUTO_INCREMENT=84 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `,
+        `
+        CREATE TABLE IF NOT EXISTS ${database_integration}.fotos_produtos (
+          id int(11) NOT NULL AUTO_INCREMENT,
+          id_foto_nuvemshop varchar(50) NOT NULL DEFAULT '',
+          id_produto_nuvemshop varchar(50) NOT NULL DEFAULT '',
+          src varchar(255) DEFAULT NULL,
+          posicao int(10) NOT NULL DEFAULT 0,
+          hash varchar(255) DEFAULT NULL,
+          nome_arquivo varchar(255) DEFAULT NULL,
+          codigo_produto_erp int(11) NOT NULL DEFAULT 0,
+          id_foto_erp int(10) NOT NULL DEFAULT 0,
+          created_at timestamp NOT NULL DEFAULT current_timestamp(),
+          updated_at timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          PRIMARY KEY ( id )
+        ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+        `
+              
+        
         /**
         `  CREATE TABLE IF NOT EXISTS  ${database_integration}.produtos  (
                  id  int(11) NOT NULL AUTO_INCREMENT,
@@ -192,8 +243,8 @@ export async function seed(){
                 console.log(e);
             }
         }   
- 
-}
+
+        }
 
 
  
