@@ -9,9 +9,10 @@ export interface cad_orca{
     TOTAL_GERAL:number,
     DATA_PEDIDO:any,
     VALOR_FRETE:number,
-    SITUACAO:string,
+    SITUACAO: string | null,
     DATA_CADASTRO:any,
     HORA_CADASTRO:any,
+    DATA_RECAD: string,
     DATA_INICIO:any,
     HORA_INICIO:any,
     VENDEDOR:number,
@@ -38,8 +39,6 @@ export interface cad_orca{
     QUANTIDADE: number 
     MIDIA:number
     VALOR_FRETE_CIF:number
-    FULLFILMENT_ORDER_ID: string
-    SHOPIFY_ORDER_ID:string
 }
 
 

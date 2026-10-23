@@ -1,6 +1,7 @@
 
 
 export interface cad_clie{
+    CODIGO?:number
     NOME:string
     APELIDO:string
     FIS_JUR: 'F' | 'J'

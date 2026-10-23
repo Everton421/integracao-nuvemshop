@@ -205,4 +205,44 @@ import { type ResponseNuvemshopCategory } from "./types/types-category-request.t
         }
 
     }
+
+    /**
+     *  Retorna uma lista com os codigo das categorias da Numvenshop.
+     * @param erpCategory Código da categoria no ERP.
+     * @param erpCodeSubcategory Código da subcategoria no ERP.
+     * @returns 
+     */
+    async resolveCategories(erpCategory: number, erpCodeSubcategory: number) {
+        const codeCategoriesToSend: number[] = [];
+        const categoriaId = await this.ensureCategorySynced('grupo', erpCategory);
+        if (categoriaId) codeCategoriesToSend.push(categoriaId);
+
+        const subCategoriaId = await this.ensureCategorySynced('subgrupo', erpCodeSubcategory);
+        if (subCategoriaId) codeCategoriesToSend.push(subCategoriaId);
+
+        return codeCategoriesToSend;
+    }
+
+    /**
+     * Garante sincronizaão da categoria.
+     * @param typeCategory 'grupo' | 'subgrupo'.
+     * @param codeErpCategory Codigo da categoria/subcategoria no ERP.
+     * @returns Retorna ID da categoria na Nuvemshop.
+     */
+    private async ensureCategorySynced (typeCategory: 'grupo' | 'subgrupo', codeErpCategory:number){
+        let dataCategories = await this.categoriaIntegrationRepository.findByErpCodigo( typeCategory, codeErpCategory);
+
+             if (dataCategories.length === 0) {
+                console.log(`[!] ${typeCategory} ${codeErpCategory} não enviada. Sincronizando...`);
+                const syncResponse = typeCategory === 'grupo' 
+                    ? await this.syncCategory(codeErpCategory)
+                    : await this.syncSubCategory(codeErpCategory);
+
+                if (syncResponse.success) {
+                    dataCategories = await this.categoriaIntegrationRepository.findByErpCodigo(typeCategory, codeErpCategory);
+                }
+            }
+
+      return dataCategories.length > 0 ? Number(dataCategories[0].id_nuvemshop) : null;
+    }
 }

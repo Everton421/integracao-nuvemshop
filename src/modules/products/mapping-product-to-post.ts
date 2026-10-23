@@ -46,13 +46,11 @@ import { type typeCompleteProduct } from "./repository/produto-repository.ts";
 
             };  
 
-            if(dataProductErp.TITULO_SITE) partialPayload.name = { pt : dataProductErp.TITULO_SITE }
+             partialPayload.name = { pt : dataProductErp.TITULO_SITE || dataProductErp.DESCRICAO  }
 
-            if(dataProductErp.DESCR_LONGA_SITE){
                 partialPayload.description =  {
-                        pt: dataProductErp.DESCR_LONGA_SITE
+                        pt: dataProductErp.DESCR_LONGA_SITE || dataProductErp.APLICACAO || ''
                     }
-            }
 
             const tags = []
             if(dataProductErp.CATEGORIA ) tags.push(dataProductErp.CATEGORIA)

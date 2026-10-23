@@ -1,3 +1,4 @@
+import mysql from 'mysql2/promise'
 
 type resultStockProductToShipping = {
     CODIGO:number 
@@ -19,7 +20,6 @@ type resultPriceProductToShipping = {
 }
 
 
-import mysql from 'mysql2/promise'
 export class InventoryRepository { 
 
     private databasePublico:string ; 
@@ -36,10 +36,19 @@ export class InventoryRepository {
         this.databaseVendas=databaseVendas;
     }
  
+    /**
+     * 
+     * @returns Obtem o saldo real dos produtos sincronizados com a nuvemshop
+     */
 
-  async  findStockProductToShipping():Promise<resultStockProductToShipping[]>{
+    /**
+     * 
+     * @param product Parametro opcional, consulta o produto pelo codigo do ERP.
+     * @returns Obtem o saldo real dos produtos sincronizados com a nuvemshop
+     */
+  async  findStockProductToShipping(product?:number):Promise<resultStockProductToShipping[]>{
 
-        const sql =`
+        let sql =`
 				SELECT
                     P.CODIGO,
                     GREATEST(COALESCE(EST.ESTOQUE_TOTAL, 0) - COALESCE(RES.RESERVADO, 0), 0) AS ESTOQUE,
@@ -76,31 +85,76 @@ export class InventoryRepository {
                     WHERE CO.SITUACAO IN ('AI','AP','FP') 
                     GROUP BY PO.PRODUTO
                 ) RES ON RES.PRODUTO = P.CODIGO
-                WHERE P.ATIVO = 'S';
+                WHERE P.ATIVO = 'S'
             `
+             if(product){
+                sql += ` AND P.CODIGO = ${product}` 
+            }
          const [rows] = await this.connection.query(sql ) as any;
         return rows
     }
 
+    /**
+     * 
+     * @returns Retorna todos os preços dos produtos que foram enviados
+     */
 
-    async findPriceProductToShipping():Promise<resultPriceProductToShipping[]>{
 
-        const sql = `
+    /**
+     * 
+     * @param table Código da tabela de preços do ERP. 
+     * @returns Retorna todos os preços dos produtos que foram enviados
+     */
+    async findPriceProductToShipping(table:number, erpCodeProduct?:number ):Promise<resultPriceProductToShipping[]>{
+        let sql = `
             SELECT 
             tp.PRODUTO as CODIGO,
-            tp.PRECO,
-            ip.preco as ULTIMO_PRECO_ENVIADO,
-            ip.promocao as ULTIMO_PROMOCAO_ENVIADA,
+            CAST(tp.PRECO AS DECIMAL(10,2)) AS PRECO ,
+            CAST(ip.preco AS DECIMAL(10,2)) as ULTIMO_PRECO_ENVIADO,
+            CAST(ip.promocao  AS DECIMAL(10,2)) as ULTIMO_PROMOCAO_ENVIADA,
             ip.id_produto_nuvemshop,
             ip.id_variante_nuvemshop,
-            if( NOW() > tp.VALID_PROM , 0, tp.PROMOCAO ) as PROMOCAO
+            if( NOW() > tp.VALID_PROM , 0, CAST(tp.PROMOCAO  AS DECIMAL(10,2)) ) as PROMOCAO
                 from ${this.databasePublico}.prod_tabprecos tp
                 join ${this.databaseIntegration}.produtos ip on ip.codigo_erp = tp.PRODUTO
+                WHERE tp.TABELA = ? 
                 GROUP BY tp.PRODUTO 
         `;
-               const [rows] = await this.connection.query(sql ) as any;
+        const values =[table];
+            if(erpCodeProduct){
+                sql +=   ` AND tp.PRODUTO = ? `
+                values.push(erpCodeProduct);
+            }
+
+               const [rows] = await this.connection.query(sql,  values) as any;
         return rows
     }
-        
+
+        /**
+         * @param table Código da tabela de preços do ERP. 
+         * @returns Retorna os preços que foram alterados, comparando o ultimo preço enviado com o preço do sistema 
+         */
+        async findUpdatedPrices(table:number):Promise<resultPriceProductToShipping[]>{
+        const sql = `
+              SELECT 
+                    tp.PRODUTO as CODIGO,
+                    CAST(tp.PRECO AS DECIMAL(10,2)) AS PRECO ,
+                    CAST(ip.preco AS DECIMAL(10,2)) as ULTIMO_PRECO_ENVIADO,
+                    CAST(ip.promocao  AS DECIMAL(10,2)) as ULTIMO_PROMOCAO_ENVIADA,
+                    ip.id_produto_nuvemshop,
+                    ip.id_variante_nuvemshop,
+                    if( NOW() > tp.VALID_PROM , 0, CAST(tp.PROMOCAO  AS DECIMAL(10,2)) ) as PROMOCAO
+				from ${this.databasePublico}.prod_tabprecos tp
+                join ${this.databaseIntegration}.produtos ip on ip.codigo_erp = tp.PRODUTO		
+				WHERE tp.TABELA = ? AND 
+                  ( 
+				    CAST( tp.PRECO AS DECIMAL(10,2) )  <> CAST(ip.preco AS DECIMAL(10,2)) 
+				     OR IF(NOW() > tp.VALID_PROM , 0, CAST(tp.PROMOCAO AS DECIMAL(10,2) )) <> CAST( ip.promocao AS DECIMAL(10,2))
+                    )
+                GROUP BY tp.PRODUTO `
+               const [rows] = await this.connection.query(sql ,[table]) as any;
+        return rows
+
+        }
          
 }

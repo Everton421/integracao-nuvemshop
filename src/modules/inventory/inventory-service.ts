@@ -33,6 +33,7 @@ export class InventoryService{
        * @param price Preço do produto
        */
     async updateInventory( input:{ code: number,stock?:number, price?:number, promotion?:number} ){
+        console.log(input)
         const {code, price, stock, promotion } =input;
         try{
 
@@ -51,21 +52,24 @@ export class InventoryService{
 
                 if( result.length   ){
                     let payloadUpdateLocal: { estoque?:number, preco?:number, promocao ?:number, ultimo_envio_estoque?:string , ultimo_envio_preco?:string  } = { }
-                        if(stock){
+                        if(stock != null || stock != undefined ){
                              payloadUpdateLocal.estoque = stock;
                             payloadUpdateLocal.ultimo_envio_estoque = this.dateService.obterDataHoraAtual()
                         }
-                        if(price){
+                        if(price!= undefined || price != null ){
                             payloadUpdateLocal.preco = price;
                             payloadUpdateLocal.ultimo_envio_preco = this.dateService.obterDataHoraAtual()
                         } 
-                        if(promotion){
+                        if(promotion != undefined || promotion != null){
                             payloadUpdateLocal.promocao = promotion;
                         }
                     await  this.productIntegration.update( payloadUpdateLocal , code);
-                }
+                } 
+                        return { success: true, message: `[V] atualizado com sucesso preco/estoque de ${result.length || 0 } variantes.`}
+                
             }catch(error: any){
                 console.error(`[X] ERRO CRÍTICO AO TENTAR ENVIAR ESTOQUE/PREÇO ${code}, ERRO: `, error?.message || error)
+                throw error
             }
     } 
 }

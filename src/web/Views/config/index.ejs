@@ -73,7 +73,7 @@
                 </div>
 
                 <p class="text-muted">
-                    Configuracoes gravadas em <code>modulo_configuracoes</code>.
+                    Configuracoes gravadas em <code>config</code> (uma linha por modulo).
                     As chaves marcadas como <strong>S</strong> estao ligadas.
                 </p>
 
@@ -83,9 +83,9 @@
                 </div>
 
                 <%#
-                    config(produtos, 'produtos') | config(precos, 'precos') | ...
-                    Cada bloco abaixo e um modulo. Os campos declarados aqui sao os que
-                    o controller grava em modulo_configuracoes (modulo + chave + valor).
+                    Cada bloco abaixo e um modulo (uma linha da tabela config).
+                    Os campos declarados aqui sao os que o controller grava:
+                    cron (S/N), eventos (S/N) e expressao_cron.
                 %>
 
                 <!-- PRODUTOS -->
@@ -97,34 +97,26 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-enviar_produtos"
-                                        data-chave="enviar_produtos" data-tipo="bool"
-                                        <%= configuracoes.produtos && configuracoes.produtos.enviar_produtos === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="produtos-enviar_produtos">Enviar produtos</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-cron"
+                                        data-chave="cron" data-tipo="bool"
+                                        <%= configuracoes.produtos && configuracoes.produtos.cron === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="produtos-cron">Executar tarefas agendadas (cron)</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-forcar_atualizacao"
-                                        data-chave="forcar_atualizacao" data-tipo="bool"
-                                        <%= configuracoes.produtos && configuracoes.produtos.forcar_atualizacao === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="produtos-forcar_atualizacao">Forcar atualizacao sem alteracao no ERP</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-eventos"
+                                        data-chave="eventos" data-tipo="bool"
+                                        <%= configuracoes.produtos && configuracoes.produtos.eventos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="produtos-eventos">Operar com eventos</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="produtos-enviar_fotos_automatico"
-                                        data-chave="enviar_fotos_automatico" data-tipo="bool"
-                                        <%= configuracoes.produtos && configuracoes.produtos.enviar_fotos_automatico === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="produtos-enviar_fotos_automatico">Enviar fotos logo apos criar o produto</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="produtos-canais_venda">Canais de venda (IDs separados por virgula)</label>
-                                <input type="text" class="form-control" id="produtos-canais_venda"
-                                    data-chave="canais_venda" data-tipo="text"
-                                    value="<%= configuracoes.produtos ? (configuracoes.produtos.canais_venda || '') : '' %>"
-                                    placeholder="vazio = canal padrao da loja">
+                                <label class="form-label" for="produtos-expressao_cron">Expressao cron</label>
+                                <input type="text" class="form-control" id="produtos-expressao_cron"
+                                    data-chave="expressao_cron" data-tipo="text"
+                                    value="<%= configuracoes.produtos ? (configuracoes.produtos.expressao_cron || '') : '' %>"
+                                    placeholder="*/50 * * * *">
                             </div>
                         </div>
                     </div>
@@ -143,34 +135,27 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="precos-tabela_preco">Tabela de preco (codigo no ERP)</label>
-                                <input type="number" step="1" class="form-control" id="precos-tabela_preco"
-                                    data-chave="tabela_preco" data-tipo="number"
-                                    value="<%= configuracoes.precos ? (configuracoes.precos.tabela_preco || '') : '' %>">
-                            </div>
-                            <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-aplicar_indice"
-                                        data-chave="aplicar_indice" data-tipo="bool"
-                                        <%= configuracoes.precos && configuracoes.precos.aplicar_indice === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="precos-aplicar_indice">Aplicar indice de margem (INDICE)</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-cron"
+                                        data-chave="cron" data-tipo="bool"
+                                        <%= configuracoes.precos && configuracoes.precos.cron === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="precos-cron">Executar tarefas agendadas (cron)</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-considerar_promocao"
-                                        data-chave="considerar_promocao" data-tipo="bool"
-                                        <%= configuracoes.precos && configuracoes.precos.considerar_promocao === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="precos-considerar_promocao">Considerar preco promocional</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-eventos"
+                                        data-chave="eventos" data-tipo="bool"
+                                        <%= configuracoes.precos && configuracoes.precos.eventos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="precos-eventos">Operar com eventos</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="precos-zerar_promocao_vencida"
-                                        data-chave="zerar_promocao_vencida" data-tipo="bool"
-                                        <%= configuracoes.precos && configuracoes.precos.zerar_promocao_vencida === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="precos-zerar_promocao_vencida">Zerar promocao com data vencida</label>
-                                </div>
+                                <label class="form-label" for="precos-expressao_cron">Expressao cron</label>
+                                <input type="text" class="form-control" id="precos-expressao_cron"
+                                    data-chave="expressao_cron" data-tipo="text"
+                                    value="<%= configuracoes.precos ? (configuracoes.precos.expressao_cron || '') : '' %>"
+                                    placeholder="*/50 * * * *">
                             </div>
                         </div>
                     </div>
@@ -190,34 +175,26 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-somente_ativos"
-                                        data-chave="somente_ativos" data-tipo="bool"
-                                        <%= configuracoes.categorias && configuracoes.categorias.somente_ativos === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="categorias-somente_ativos">Somente categorias ativas no site</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-cron"
+                                        data-chave="cron" data-tipo="bool"
+                                        <%= configuracoes.categorias && configuracoes.categorias.cron === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="categorias-cron">Executar tarefas agendadas (cron)</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-forcar_envio"
-                                        data-chave="forcar_envio" data-tipo="bool"
-                                        <%= configuracoes.categorias && configuracoes.categorias.forcar_envio === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="categorias-forcar_envio">Forcar envio sem alteracao no ERP</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-eventos"
+                                        data-chave="eventos" data-tipo="bool"
+                                        <%= configuracoes.categorias && configuracoes.categorias.eventos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="categorias-eventos">Operar com eventos</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="categorias-incluir_subgrupos"
-                                        data-chave="incluir_subgrupos" data-tipo="bool"
-                                        <%= configuracoes.categorias && configuracoes.categorias.incluir_subgrupos === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="categorias-incluir_subgrupos">Incluir subgrupos</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="categorias-idiomas">Idiomas do nome (separados por virgula)</label>
-                                <input type="text" class="form-control" id="categorias-idiomas"
-                                    data-chave="idiomas" data-tipo="text"
-                                    value="<%= configuracoes.categorias ? (configuracoes.categorias.idiomas || '') : '' %>"
-                                    placeholder="pt">
+                                <label class="form-label" for="categorias-expressao_cron">Expressao cron</label>
+                                <input type="text" class="form-control" id="categorias-expressao_cron"
+                                    data-chave="expressao_cron" data-tipo="text"
+                                    value="<%= configuracoes.categorias ? (configuracoes.categorias.expressao_cron || '') : '' %>"
+                                    placeholder="*/50 * * * *">
                             </div>
                         </div>
                     </div>
@@ -237,31 +214,26 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="estoque-enviar_estoque"
-                                        data-chave="enviar_estoque" data-tipo="bool"
-                                        <%= configuracoes.estoque && configuracoes.estoque.enviar_estoque === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="estoque-enviar_estoque">Enviar estoque</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="estoque-cron"
+                                        data-chave="cron" data-tipo="bool"
+                                        <%= configuracoes.estoque && configuracoes.estoque.cron === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="estoque-cron">Executar tarefas agendadas (cron)</label>
                                 </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="estoque-setor">Setor (codigo do local no ERP)</label>
-                                <input type="number" step="1" class="form-control" id="estoque-setor"
-                                    data-chave="setor" data-tipo="number"
-                                    value="<%= configuracoes.estoque ? (configuracoes.estoque.setor || '') : '' %>">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="estoque-permitir_negativo"
-                                        data-chave="permitir_negativo" data-tipo="bool"
-                                        <%= configuracoes.estoque && configuracoes.estoque.permitir_negativo === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="estoque-permitir_negativo">Permitir saldo negativo</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="estoque-eventos"
+                                        data-chave="eventos" data-tipo="bool"
+                                        <%= configuracoes.estoque && configuracoes.estoque.eventos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="estoque-eventos">Operar com eventos</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="estoque-margem_seguranca">Margem de seguranca (unidades)</label>
-                                <input type="number" step="1" class="form-control" id="estoque-margem_seguranca"
-                                    data-chave="margem_seguranca" data-tipo="number"
-                                    value="<%= configuracoes.estoque ? (configuracoes.estoque.margem_seguranca || '') : '' %>">
+                                <label class="form-label" for="estoque-expressao_cron">Expressao cron</label>
+                                <input type="text" class="form-control" id="estoque-expressao_cron"
+                                    data-chave="expressao_cron" data-tipo="text"
+                                    value="<%= configuracoes.estoque ? (configuracoes.estoque.expressao_cron || '') : '' %>"
+                                    placeholder="*/50 * * * *">
                             </div>
                         </div>
                     </div>
@@ -281,39 +253,26 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-importar_pedidos"
-                                        data-chave="importar_pedidos" data-tipo="bool"
-                                        <%= configuracoes.pedidos && configuracoes.pedidos.importar_pedidos === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="pedidos-importar_pedidos">Importar pedidos</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="pedidos-forma_pagamento">Forma de pagamento (codigo no ERP)</label>
-                                <input type="number" step="1" class="form-control" id="pedidos-forma_pagamento"
-                                    data-chave="forma_pagamento" data-tipo="number"
-                                    value="<%= configuracoes.pedidos ? (configuracoes.pedidos.forma_pagamento || '') : '' %>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="pedidos-vendedor_pedido">Codigo do vendedor (ERP)</label>
-                                <input type="number" step="1" class="form-control" id="pedidos-vendedor_pedido"
-                                    data-chave="vendedor_pedido" data-tipo="number"
-                                    value="<%= configuracoes.pedidos ? (configuracoes.pedidos.vendedor_pedido || '') : '' %>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-atualizar_status"
-                                        data-chave="atualizar_status" data-tipo="bool"
-                                        <%= configuracoes.pedidos && configuracoes.pedidos.atualizar_status === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="pedidos-atualizar_status">Atualizar status do pedido</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-cron"
+                                        data-chave="cron" data-tipo="bool"
+                                        <%= configuracoes.pedidos && configuracoes.pedidos.cron === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="pedidos-cron">Executar tarefas agendadas (cron)</label>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-enviar_faturamento"
-                                        data-chave="enviar_faturamento" data-tipo="bool"
-                                        <%= configuracoes.pedidos && configuracoes.pedidos.enviar_faturamento === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="pedidos-enviar_faturamento">Enviar faturamento</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="pedidos-eventos"
+                                        data-chave="eventos" data-tipo="bool"
+                                        <%= configuracoes.pedidos && configuracoes.pedidos.eventos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="pedidos-eventos">Operar com eventos</label>
                                 </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="pedidos-expressao_cron">Expressao cron</label>
+                                <input type="text" class="form-control" id="pedidos-expressao_cron"
+                                    data-chave="expressao_cron" data-tipo="text"
+                                    value="<%= configuracoes.pedidos ? (configuracoes.pedidos.expressao_cron || '') : '' %>"
+                                    placeholder="*/50 * * * *">
                             </div>
                         </div>
                     </div>
@@ -332,30 +291,27 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="integracao-intervalo_entre_requisicoes_ms">Intervalo entre requisicoes (ms)</label>
-                                <input type="number" step="50" min="0" class="form-control" id="integracao-intervalo_entre_requisicoes_ms"
-                                    data-chave="intervalo_entre_requisicoes_ms" data-tipo="number"
-                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.intervalo_entre_requisicoes_ms || '') : '' %>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="integracao-tentativas_retry">Tentativas em caso de erro</label>
-                                <input type="number" step="1" min="1" class="form-control" id="integracao-tentativas_retry"
-                                    data-chave="tentativas_retry" data-tipo="number"
-                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.tentativas_retry || '') : '' %>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="integracao-pagina_tamanho">Registros por pagina nas listagens</label>
-                                <input type="number" step="1" min="1" class="form-control" id="integracao-pagina_tamanho"
-                                    data-chave="pagina_tamanho" data-tipo="number"
-                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.pagina_tamanho || '') : '' %>">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="integracao-cron"
+                                        data-chave="cron" data-tipo="bool"
+                                        <%= configuracoes.integracao && configuracoes.integracao.cron === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="integracao-cron">Executar tarefas agendadas (cron)</label>
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="integracao-reenviar_falhas"
-                                        data-chave="reenviar_falhas" data-tipo="bool"
-                                        <%= configuracoes.integracao && configuracoes.integracao.reenviar_falhas === 'S' ? 'checked' : '' %>>
-                                    <label class="form-check-label" for="integracao-reenviar_falhas">Reprocessar itens com erro no proximo ciclo</label>
+                                    <input class="form-check-input" type="checkbox" role="switch" id="integracao-eventos"
+                                        data-chave="eventos" data-tipo="bool"
+                                        <%= configuracoes.integracao && configuracoes.integracao.eventos === 'S' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="integracao-eventos">Operar com eventos</label>
                                 </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="integracao-expressao_cron">Expressao cron</label>
+                                <input type="text" class="form-control" id="integracao-expressao_cron"
+                                    data-chave="expressao_cron" data-tipo="text"
+                                    value="<%= configuracoes.integracao ? (configuracoes.integracao.expressao_cron || '') : '' %>"
+                                    placeholder="*/50 * * * *">
                             </div>
                         </div>
                     </div>

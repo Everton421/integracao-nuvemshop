@@ -9,7 +9,8 @@ export type typeCompleteProduct = {
                 GARANTIA: number,
                 COMPRIMENTO: number,
                 ALTURA: number,
-
+                DESCRICAO:string
+                APLICACAO:string
                 PRECO?:string
                 PROMOCAO?:string
                 VALID_PROM?:string,
@@ -44,6 +45,24 @@ type typeStockProduct = {
   CODIGO:number,
   ESTOQUE:number
 }
+
+export type ProductViewFilters = {
+  search?: string
+  syncStatus?: 'synced' | 'not_synced'
+  grupo?: number
+  subgrupo?: number
+}
+
+export type ProductViewRow = {
+  CODIGO: number,
+  DESCRICAO: string,
+  TITULO_SITE: string | null,
+  CODIGO_GRUPO: number | null,
+  CODIGO_SUBGRUPO: number | null,
+  id: number | null,
+  NO_SITE: 'S' | 'N',
+  ATIVO: 'S' | 'N'
+}
 export class ProductErpRepository {
 
     private databasePublico:string ; 
@@ -77,6 +96,8 @@ export class ProductErpRepository {
                 p.DESCR_CURTA_SITE,
                 p.DESCR_LONGA_SITE,
                 p.APLICACAO_SITE,
+                p.DESCRICAO,
+                CAST(p.APLICACAO AS CHAR(10000) CHARACTER SET latin1) AS APLICACAO,
                 p.TITULO_SITE,
                 p.GARANTIA,
                 p.COMPRIMENTO,
@@ -140,7 +161,7 @@ export class ProductErpRepository {
    * @param isUpdate determina se deve ser comparado a data de ultimo envio com a data de atualização do sistema.
    * @returns 
    */
-  async findProductsForShipping(isUpdate:boolean = true): Promise<resultQueryProductsForShipping[]>{
+  async findProductsForShipping(isUpdate:boolean = true, erpCodeProduct?:number ): Promise<resultQueryProductsForShipping[]>{
 
   let baseSql = `
     SELECT 	
@@ -153,15 +174,108 @@ export class ProductErpRepository {
     FROM 
       ${this.databasePublico}.cad_prod cp
      left join ${this.databaseIntegration}.produtos ip on ip.codigo_erp = cp.CODIGO
-    WHERE ATIVO ='S' AND NO_SITE='S'  AND cp.codigo  < 1000
+    WHERE ATIVO ='S' AND NO_SITE='S' 
     `;
     if(isUpdate){
       baseSql += ` AND  ( cp.DATA_RECAD > ip.ultimo_envio_produto OR ip.id is null ) `;
     }
+    if(erpCodeProduct){
+       baseSql +=` AND cp.codigo = '${erpCodeProduct}' `
+    }
     const [rows] = await this.connection.query(baseSql );
     return rows as resultQueryProductsForShipping[];
   }
+/**
+ * Monta o FROM/WHERE usado na listagem de produtos (usado no SELECT e no COUNT).
+ * @param filters filtros da tela de produtos
+ * @returns cláusula FROM + WHERE e os valores para o prepared statement
+ */
+private buildProductsForViewQuery(filters: ProductViewFilters): { from: string, where: string, values: any[] } {
+  const conditions: string[] = []
+  const values: any[] = []
 
+  if (filters.search) {
+    const term = `%${filters.search}%`
+    conditions.push(' ( CAST(cp.CODIGO AS CHAR) LIKE ? OR cp.DESCRICAO LIKE ? OR cp.TITULO_SITE LIKE ? ) ')
+    values.push(term, term, term)
+  }
+
+  if (filters.syncStatus === 'synced') {
+    conditions.push(' inp.id IS NOT NULL ')
+  } else if (filters.syncStatus === 'not_synced') {
+    conditions.push(' inp.id IS NULL ')
+  }
+
+  if (filters.grupo) {
+    conditions.push(' cp.GRUPO = ? ')
+    values.push(filters.grupo)
+  }
+
+  if (filters.subgrupo) {
+    conditions.push(' cp.SUBGRUPO = ? ')
+    values.push(filters.subgrupo)
+  }
+
+  conditions.push(' cp.ATIVO = ?  ');
+  values.push('S');
+  conditions.push(' cp.NO_SITE = ?  ');
+  values.push('S');
+
+
+  const from = `
+    from ${this.databasePublico}.cad_prod cp
+    left join ${this.databaseIntegration}.produtos inp on inp.codigo_erp = cp.CODIGO
+  `
+
+  const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')} ` : ''
+
+  return { from, where, values }
+}
+
+/**
+ * Retorna uma pagina de produtos para a tela de listagem.
+ * @param filters filtros da tela
+ * @param limit quantidade de registros da pagina
+ * @param offset deslocamento da pagina
+ * @returns ProductViewRow[]
+ */
+async findProductsForView(filters: ProductViewFilters = {}, limit = 50, offset = 0): Promise<ProductViewRow[]> {
+  const { from, where, values } = this.buildProductsForViewQuery(filters)
+
+  const sql = `
+    select
+      cp.CODIGO,
+      cp.DESCRICAO,
+      cp.TITULO_SITE,
+      cp.GRUPO as CODIGO_GRUPO,
+      cp.SUBGRUPO as CODIGO_SUBGRUPO,
+      inp.id,
+      cp.NO_SITE,
+      cp.ATIVO
+    ${from}
+    ${where}
+     GROUP BY cp.CODIGO
+    ORDER BY cp.CODIGO
+    LIMIT ? OFFSET ?
+  `
+
+  const [rows] = await this.connection.query(sql, [...values, limit, offset]) as any;
+  return rows;
+}
+
+/**
+ * Conta o total de produtos para os filtros informados (usado na paginacao).
+ * @param filters filtros da tela
+ * @returns total de registros
+ */
+async countProductsForView(filters: ProductViewFilters = {}): Promise<number> {
+  const { from, where, values } = this.buildProductsForViewQuery(filters)
+
+  const sql = `select count(*) as total ${from} ${where}`
+  const [rows] = await this.connection.query(sql, values) as any;
+
+  return Number(rows[0]?.total ?? 0)
+}
     
   async findStock(product?:number):Promise<typeStockProduct[]>{
    let sql= `SELECT
@@ -175,7 +289,6 @@ export class ProductErpRepository {
                         SUM(PS.ESTOQUE) AS ESTOQUE_TOTAL
                     FROM ${this.databaseEstoque}.prod_setor PS
                     WHERE PS.SETOR IN (
-                        -- Usando DISTINCT para evitar duplicar linhas caso o setor esteja em mais de uma empresa
                         SELECT DISTINCT S.SETOR
                         FROM ${this.databaseVendas}.empresas_setor S
                         WHERE S.EST_ATUAL = 'X'   AND  S.EST_REAL = 'X' 
@@ -183,7 +296,6 @@ export class ProductErpRepository {
                     GROUP BY PS.PRODUTO
                 ) EST ON EST.PRODUTO = P.CODIGO
 
-                -- 2. Subconsulta de RESERVAS em orçamentos pendentes
                 LEFT JOIN (
                     SELECT
                         PO.PRODUTO,

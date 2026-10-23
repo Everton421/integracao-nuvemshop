@@ -43,72 +43,7 @@
 
     <div class="container-fluid">
         <div class="row">
-            <!--
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3 sidebar-sticky">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="/">
-                                <span data-feather="home"></span>
-                                Painel Principal
-                            </a>
-                        </li>
-                        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
-                            <span>Sincronizações</span>
-                        </h6>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/produtos"> <!- Exemplo de rota ->
-                                <span data-feather="package"></span>
-                                Produtos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/clientes">
-                                <span data-feather="users"></span>
-                                Clientes
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link"  >
-                                <span data-feather="briefcase"></span>
-                                Serviços
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/categorias">
-                                <span data-feather="tag"></span>
-                                Categorias
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/pedidos">
-                                <span data-feather="shopping-cart"></span>
-                                Pedidos
-                            </a>
-                        </li>
-                    </ul>
-
-                    <h6
-                        class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
-                        <span>Relatórios e Logs</span>
-                    </h6>
-                    <ul class="nav flex-column mb-2">
-                        <li class="nav-item">
-                            <a class="nav-link"  >
-                                <span data-feather="file-text"></span>
-                                Logs Gerais
-                            </a>
-                        </li>
-                          <li class="nav-item">
-                            <a class="nav-link" href="/configuracoes">
-                                <span data-feather="settings"></span>
-                                Configurações
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-             -->
+         
    <%- include('components/sidebar', { activePage: 'home' }) %>
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 <div
@@ -157,8 +92,7 @@
                             <div class="card-body">
                                 <h5 class="card-title"><span data-feather="shopping-cart" class="me-2"></span>Pedidos</h5>
                                 <p class="card-text">
-                                    Última sincronização: <strong id="statusPedidosLastSync"><%= locals.statusPedidos ? statusPedidos.lastSync : 'N/A' %></strong><br>
-
+                                    Última sincronização: <strong id="statusPedidosLastSync"><%= dados.ultimo_recebimento_pedido ?   new Date(dados.ultimo_recebimento_pedido).toLocaleString("pt-br",  {  year: "numeric", month: "long", day: "numeric" }) :   'N/A' %></strong><br>
                                 </p>
                                 <form action="/pedidos" method="get" class="d-inline">
                                     <button type="submit" class="btn btn-primary btn-sm">Sincronizar Agora</button>
@@ -173,40 +107,6 @@
 
                 </div> <!-- Fim da .row dos cards -->
 
-                <!-- Exemplo de uma tabela de logs recentes (opcional) -->
-                <!--
-                <h2>Logs Recentes</h2>
-                <div class="table-responsive">
-                    <table class="table table-striped table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="col">#</th>
-                                <th scope="col">Data/Hora</th>
-                                <th scope="col">Tipo</th>
-                                <th scope="col">Mensagem</th>
-                                <th scope="col">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% if (locals.recentLogs && recentLogs.length > 0) { %>
-                                <% recentLogs.forEach(function(log, index) { %>
-                                    <tr>
-                                        <td><%= index + 1 %></td>
-                                        <td><%= log.timestamp %></td>
-                                        <td><%= log.type %></td>
-                                        <td><%= log.message %></td>
-                                        <td><span class="badge <%= log.success ? 'bg-success' : 'bg-danger' %>"><%= log.success ? 'Sucesso' : 'Erro' %></span></td>
-                                    </tr>
-                                <% }); %>
-                            <% } else { %>
-                                <tr>
-                                    <td colspan="5" class="text-center">Nenhum log recente.</td>
-                                </tr>
-                            <% } %>
-                        </tbody>
-                    </table>
-                </div>
-                -->
 
             </main>
         </div>
